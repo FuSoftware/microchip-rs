@@ -48,6 +48,7 @@ fn main() {
     );
     let mut now = Instant::now();
     mcu.run_opcode_old(opcode);
+    
     println!("{}", now.elapsed().as_nanos());
     println!(
         "REG: {:08b}, C: {}",
@@ -61,5 +62,5 @@ fn main() {
         "REG: {:08b}, C: {}",
         mcu.get_memory_address(0x7E).unwrap(),
         mcu.get_carry_flag()
-    );
+    );   
 }

@@ -184,6 +184,7 @@ pub struct PIC16F628A {
     status: u8,
     additional_cycles: u8,
     program_memory: [u8; 0x7FF],
+    stack: Vec<u16>,
     registers: [u8; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
     common_memory: [u8; 16],
     GPR1: [u8; 80],
@@ -204,6 +205,7 @@ impl PIC16F628A {
             status: 0,
             additional_cycles: 0,
             program_memory: [0; 0x7FF],
+            stack: Vec::new(),
             registers: [0; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
             common_memory: [0; 16],
             GPR1: [0; 80],
@@ -636,39 +638,69 @@ impl PIC16F628A {
         todo!();
     }
 
-    fn op_movwf(&mut self) {
-        todo!();
+    // Move W to f
+    fn op_movwf_new(&mut self, f: u8) {
+        self.set_memory_address(f, self.w);
     }
 
+    fn op_movwf(&mut self) {
+        self.f = (self.opcode & 0x7f) as u8;
+        self.op_movwf_new(self.f);
+    }
+
+    // No Operation
     fn op_nop(&mut self) {
-        todo!();
+        return;
+    }
+
+    // Rotate Left f through Carry
+    fn op_rlf_new(&mut self, f: u8, d: bool) {
+        let new_data: u8;
+        let new_carry: bool;
+
+        if let Some(reg) = self.get_memory_address(f) {
+            new_carry = *reg & 0x80 > 0;
+            new_data = (*reg << 1) + self.get_carry_flag() as u8;
+        } else {
+            println!("Invalid register while processing RRF {}", f);
+            return;
+        }
+
+        self.set_carry_flag(new_carry);
+
+        if d {
+            self.set_memory_address(f, new_data);
+        } else {
+            self.w = new_data;
+        }
     }
 
     fn op_rlf(&mut self) {
-        todo!();
+        self.f = (self.opcode & 0x7f) as u8;
+        self.d = (self.opcode >> 7) & 1 > 0;
+
+        self.op_rlf_new(self.f, self.d);
     }
 
+    // Rotate Right f through Carry
     fn op_rrf_new(&mut self, f: u8, d: bool) {
-        let mut new_data: u8 = 0;
-        let mut new_carry: bool = false;
+        let new_data: u8;
+        let new_carry: bool;
 
         if let Some(reg) = self.get_memory_address(f) {
             new_data = (*reg >> 1) + self.get_carry_flag() as u8 * 0x80;
             new_carry = *reg & 0x01 > 0;
         } else {
             println!("Invalid register while processing RRF {}", f);
+            return;
         }
 
         self.set_carry_flag(new_carry);
 
-        if let Some(reg) = self.get_memory_address_mut(f) {
-            if d {
-                *reg = new_data;
-            } else {
-                self.w = new_data;
-            }
+        if d {
+            self.set_memory_address(f, new_data);
         } else {
-            println!("Invalid register while processing RRF {}", f);
+            self.w = new_data;
         }
     }
 
@@ -676,28 +708,7 @@ impl PIC16F628A {
         self.f = (self.opcode & 0x7f) as u8;
         self.d = (self.opcode >> 7) & 1 > 0;
 
-        let mut new_data: u8 = 0;
-        let mut new_carry: bool = false;
-        let d = self.d;
-
-        if let Some(reg) = self.get_memory_address(self.f) {
-            new_data = *reg >> 1 + self.get_carry_flag() as u8 * 0x80;
-            new_carry = *reg & 0x01 > 0;
-        } else {
-            println!("Invalid register while processing RRF {}", self.f);
-        }
-
-        self.set_carry_flag(new_carry);
-
-        if let Some(reg) = self.get_memory_address_mut(self.f) {
-            if d {
-                *reg = new_data;
-            } else {
-                self.w = new_data;
-            }
-        } else {
-            println!("Invalid register while processing RRF {}", self.f);
-        }
+        self.op_rrf_new(self.f, self.d);
     }
 
     fn op_subwf(&mut self) {
