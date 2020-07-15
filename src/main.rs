@@ -1,12 +1,13 @@
 mod lib;
 use lib::mcus::pic16f628a::*;
+use lib::mcus::mcs51::*;
 use std::time::{Duration, Instant};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn test_register_operations() {
+    fn test_register_operations_16f628a() {
         let mut mcu = PIC16F628A::new();
         mcu.reset();
 
@@ -30,6 +31,36 @@ mod tests {
             *mcu.get_register(PIC16F628A_REGISTERS::PORTA).unwrap(),
             0x0F
         );
+    }
+
+    #[test]
+    fn test_register_operations_mcs51() {
+        let mut mcu = MCS51::new();
+        mcu.reset();
+        assert_eq!(mcu.accumulator, 0);
+        mcu.set_program(vec![
+            0x04,
+            0x04,
+            0x04,
+            0x09,
+            0x09,
+            0x14,
+            0x14,
+            0x19,
+        ]);
+        mcu.clock();
+        assert_eq!(mcu.accumulator, 1);
+        mcu.clock();
+        mcu.clock();
+        assert_eq!(mcu.accumulator, 3);
+        mcu.clock();
+        mcu.clock();
+        assert_eq!(mcu.registers[1], 2);
+        mcu.clock();
+        mcu.clock();
+        assert_eq!(mcu.accumulator, 1);
+        mcu.clock();
+        assert_eq!(mcu.registers[1], 1);
     }
 }
 
