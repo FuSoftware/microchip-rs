@@ -1,6 +1,6 @@
 mod lib;
-use lib::mcus::pic16f628a::*;
 use lib::mcus::mcs51::*;
+use lib::mcus::pic16f628a::*;
 use std::time::{Duration, Instant};
 
 #[cfg(test)]
@@ -47,7 +47,7 @@ mod tests {
             0x14, // Decrement Accumulator
             0x14, // Decrement Accumulator
             0x19, // Decrement Register 1
-            0x09,// Increment Register 1
+            0x09, // Increment Register 1
         ]);
         mcu.clock();
         assert_eq!(mcu.get_accumulator(), 1);
@@ -118,7 +118,7 @@ mod tests {
             0x09, // Increment Register 1
             0x09, // Increment Register 1
             0x74, 0xFE, // Store 0xFE in accumulator
-            0x79, 0xFD // Store 0xFD in R1
+            0x79, 0xFD, // Store 0xFD in R1
         ]);
         for _i in 0..6 {
             mcu.clock();
@@ -147,7 +147,7 @@ pub fn test1() {
     );
     let mut now = Instant::now();
     mcu.run_opcode_old(opcode);
-    
+
     println!("{}", now.elapsed().as_nanos());
     println!(
         "REG: {:08b}, C: {}",
@@ -161,7 +161,7 @@ pub fn test1() {
         "REG: {:08b}, C: {}",
         mcu.get_memory_address(0x7E).unwrap(),
         mcu.get_carry_flag()
-    ); 
+    );
 }
 
 fn main() {

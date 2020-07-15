@@ -43,7 +43,7 @@ pub enum MCS51_INST {
     XCH,
     XCHD,
     XRL,
-    UNDEFINED
+    UNDEFINED,
 }
 
 enum MCS51_REGISTERS {
@@ -73,7 +73,7 @@ enum MCS51_REGISTERS {
     PSW,
     ACC,
     B,
-    REGISTER_COUNT
+    REGISTER_COUNT,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -87,7 +87,7 @@ pub enum MCS51_ADDRESSING {
     ADDR_16,
     ADDR_11,
     RELATIVE,
-    BIT
+    BIT,
 }
 
 pub struct MCS51 {
@@ -100,7 +100,6 @@ pub struct MCS51 {
 }
 
 impl MCS51 {
-
     pub fn new() -> MCS51 {
         MCS51 {
             pc: 0,
@@ -108,7 +107,7 @@ impl MCS51 {
             ram: [0; 255],
             program: vec![],
             stack: vec![],
-            special_function_registers: [0; MCS51_REGISTERS::REGISTER_COUNT as usize]
+            special_function_registers: [0; MCS51_REGISTERS::REGISTER_COUNT as usize],
         }
     }
 
@@ -136,7 +135,6 @@ impl MCS51 {
         } else {
             self.special_function_registers[register as usize].wrapping_add(value);
         }
-        
     }
 
     pub fn write_pc_rel(&mut self, value: u16, sub: bool) {
@@ -148,7 +146,7 @@ impl MCS51 {
     }
 
     pub fn get_current_register_bank(&self) -> u8 {
-        let pr =  self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
+        let pr = self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
         let bank = pr >> 3 & 0b11;
         return bank;
     }
@@ -178,7 +176,7 @@ impl MCS51 {
 
         let value = self.read((register * 0x08) + 0x80);
         let val = *value.unwrap();
-        return (val & bit) != 0
+        return (val & bit) != 0;
     }
 
     pub fn write_bit(&mut self, address: u8, value: bool) {
@@ -201,33 +199,85 @@ impl MCS51 {
             0x00..=0x1F => self.ram.get(address as usize),
             0x20..=0x2F => self.read(0x80 + (0x08 * (address - 0x20))),
             0x30..=0x7F => self.ram.get(address as usize),
-            0x80 => self.special_function_registers.get(MCS51_REGISTERS::P0 as usize),
-            0x81 => self.special_function_registers.get(MCS51_REGISTERS::SP as usize),
-            0x82 => self.special_function_registers.get(MCS51_REGISTERS::DPL as usize),
-            0x83 => self.special_function_registers.get(MCS51_REGISTERS::DPH as usize),
-            0x87 => self.special_function_registers.get(MCS51_REGISTERS::PCON as usize),
-            0x88 => self.special_function_registers.get(MCS51_REGISTERS::TCON as usize),
-            0x89 => self.special_function_registers.get(MCS51_REGISTERS::TMOD as usize),
-            0x8A => self.special_function_registers.get(MCS51_REGISTERS::TL0 as usize),
-            0x8B => self.special_function_registers.get(MCS51_REGISTERS::TL1 as usize),
-            0x8C => self.special_function_registers.get(MCS51_REGISTERS::TH0 as usize),
-            0x8D => self.special_function_registers.get(MCS51_REGISTERS::TH1 as usize),
-            0x90 => self.special_function_registers.get(MCS51_REGISTERS::P1 as usize),
-            0x98 => self.special_function_registers.get(MCS51_REGISTERS::SCON as usize),
-            0x99 => self.special_function_registers.get(MCS51_REGISTERS::SBUF as usize),
-            0xA0 => self.special_function_registers.get(MCS51_REGISTERS::P2 as usize),
-            0xA8 => self.special_function_registers.get(MCS51_REGISTERS::IE as usize),
-            0xB0 => self.special_function_registers.get(MCS51_REGISTERS::P3 as usize),
-            0xB8 => self.special_function_registers.get(MCS51_REGISTERS::IP as usize),
-            0xC8 => self.special_function_registers.get(MCS51_REGISTERS::T2CON as usize),
-            0xCA => self.special_function_registers.get(MCS51_REGISTERS::RCAP2L as usize),
-            0xCB => self.special_function_registers.get(MCS51_REGISTERS::RCAP2H as usize),
-            0xCC => self.special_function_registers.get(MCS51_REGISTERS::TL2 as usize),
-            0xCD => self.special_function_registers.get(MCS51_REGISTERS::TH2 as usize),
-            0xD0 => self.special_function_registers.get(MCS51_REGISTERS::PSW as usize),
-            0xE0 => self.special_function_registers.get(MCS51_REGISTERS::ACC as usize),
-            0xF0 => self.special_function_registers.get(MCS51_REGISTERS::B as usize),
-            _ => None
+            0x80 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::P0 as usize),
+            0x81 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::SP as usize),
+            0x82 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::DPL as usize),
+            0x83 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::DPH as usize),
+            0x87 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::PCON as usize),
+            0x88 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TCON as usize),
+            0x89 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TMOD as usize),
+            0x8A => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TL0 as usize),
+            0x8B => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TL1 as usize),
+            0x8C => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TH0 as usize),
+            0x8D => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TH1 as usize),
+            0x90 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::P1 as usize),
+            0x98 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::SCON as usize),
+            0x99 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::SBUF as usize),
+            0xA0 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::P2 as usize),
+            0xA8 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::IE as usize),
+            0xB0 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::P3 as usize),
+            0xB8 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::IP as usize),
+            0xC8 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::T2CON as usize),
+            0xCA => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::RCAP2L as usize),
+            0xCB => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::RCAP2H as usize),
+            0xCC => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TL2 as usize),
+            0xCD => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::TH2 as usize),
+            0xD0 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::PSW as usize),
+            0xE0 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::ACC as usize),
+            0xF0 => self
+                .special_function_registers
+                .get(MCS51_REGISTERS::B as usize),
+            _ => None,
         }
     }
 
@@ -262,7 +312,7 @@ impl MCS51 {
             0xD0 => self.special_function_registers[MCS51_REGISTERS::PSW as usize] = value,
             0xE0 => self.special_function_registers[MCS51_REGISTERS::ACC as usize] = value,
             0xF0 => self.special_function_registers[MCS51_REGISTERS::B as usize] = value,
-            _ => ()
+            _ => (),
         }
     }
 
@@ -288,7 +338,7 @@ impl MCS51 {
         self.program = program;
     }
 
-    pub fn get_accumulator(&self) -> u8{
+    pub fn get_accumulator(&self) -> u8 {
         return self.special_function_registers[MCS51_REGISTERS::ACC as usize];
     }
 
@@ -359,8 +409,15 @@ impl MCS51 {
             MCS51_ADDRESSING::ACCUMULATOR => Some(*self.read_sfr(MCS51_REGISTERS::ACC).unwrap()),
             MCS51_ADDRESSING::REGISTER(reg) => Some(self.read_register(reg)),
             MCS51_ADDRESSING::DIRECT(addr) => Some(*self.read(addr).unwrap()),
-            MCS51_ADDRESSING::INDIRECT_Ri(reg) => Some(*self.read(self.read_register(reg)).unwrap()),
-            MCS51_ADDRESSING::DATA(offset) => Some(*self.program.get(self.pc as usize + offset as usize).unwrap()),
+            MCS51_ADDRESSING::INDIRECT_Ri(reg) => {
+                Some(*self.read(self.read_register(reg)).unwrap())
+            }
+            MCS51_ADDRESSING::DATA(offset) => Some(
+                *self
+                    .program
+                    .get(self.pc as usize + offset as usize)
+                    .unwrap(),
+            ),
             _ => {
                 println!("Unsupported addressing mode");
                 return None;
@@ -370,7 +427,9 @@ impl MCS51 {
 
     pub fn get_i8(&self, addressing: MCS51_ADDRESSING) -> Option<i8> {
         match addressing {
-            MCS51_ADDRESSING::DATA(offset) => Some(i8::from_be_bytes([*self.read(offset).unwrap()])),
+            MCS51_ADDRESSING::DATA(offset) => {
+                Some(i8::from_be_bytes([*self.read(offset).unwrap()]))
+            }
             _ => {
                 println!("Unsupported addressing mode");
                 return None;
@@ -396,7 +455,7 @@ impl MCS51 {
     pub fn get_u11(&self, addressing: MCS51_ADDRESSING) -> Option<u16> {
         match addressing {
             MCS51_ADDRESSING::ADDR_11 => {
-                let hi_byte = *self.program.get(self.pc as usize ).unwrap() >> 3;
+                let hi_byte = *self.program.get(self.pc as usize).unwrap() >> 3;
                 let lo_byte = *self.program.get(self.pc as usize + 1 as usize).unwrap();
                 let addr: u16 = (hi_byte as u16) << 8 + lo_byte as u16;
                 return Some(addr);
@@ -473,7 +532,7 @@ impl MCS51 {
             0x7D => self.op_mov(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1)),
             0x7E => self.op_mov(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1)),
             0x7F => self.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1)),
-            _ => println!("Unknown OPCODE")
+            _ => println!("Unknown OPCODE"),
         }
     }
 
@@ -484,7 +543,7 @@ impl MCS51 {
     }
 
     pub fn op_ajmp(&mut self, addr11: MCS51_ADDRESSING) {
-        self.pc = self.pc + 2;        
+        self.pc = self.pc + 2;
         self.pc &= 0xF800;
         self.pc += self.get_u11(addr11).unwrap();
     }
@@ -522,7 +581,7 @@ impl MCS51 {
                 self.write_pc_rel((rel & 0x7F) as u16, true);
             } else {
                 self.write_pc_rel(rel as u16, false);
-            } 
+            }
         }
     }
 
@@ -533,12 +592,12 @@ impl MCS51 {
         let bit: bool = self.read_bit(bit_address);
         let rel = self.get_i8(code_addr).unwrap();
 
-        if !bit {            
+        if !bit {
             if rel < 0 {
                 self.write_pc_rel((rel & 0x7F) as u16, true);
             } else {
                 self.write_pc_rel(rel as u16, false);
-            } 
+            }
         }
     }
 
@@ -549,12 +608,12 @@ impl MCS51 {
         let bit: bool = self.read_bit(bit_address);
         let rel = self.get_i8(code_addr).unwrap();
 
-        if bit {            
+        if bit {
             if rel < 0 {
                 self.write_pc_rel((rel & 0x7F) as u16, true);
             } else {
                 self.write_pc_rel(rel as u16, false);
-            } 
+            }
         }
     }
 
@@ -661,7 +720,5 @@ impl MCS51 {
         }
     }
 
-    pub fn op_nop(&mut self) {
-
-    }
+    pub fn op_nop(&mut self) {}
 }
