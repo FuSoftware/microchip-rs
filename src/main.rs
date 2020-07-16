@@ -125,10 +125,33 @@ mod tests {
         }
 
         mcu.clock();
+        mcu.clock_skip();
         assert_eq!(mcu.get_accumulator(), 0xFE);
 
         mcu.clock();
+        mcu.clock_skip();
         assert_eq!(mcu.read_register(1), 0xFD);
+    }
+
+    #[test]
+    fn add_operations_mcs51() {
+        let mut mcu = MCS51::new();
+        mcu.reset();
+        mcu.set_program(vec![
+            0x74, 0xC3, // Store 0xC3 in Accumulator
+            0x79, 0xAA, // Store 0xFD in R1
+            0x29 //Add R1 to accumulator
+        ]);
+        mcu.clock();
+        mcu.clock_skip();
+        mcu.clock();
+        mcu.clock_skip();
+        mcu.clock();
+        assert_eq!(mcu.read_register(1), 0xAA);
+        assert_eq!(mcu.get_accumulator(), 0x6D);
+        assert_eq!(mcu.get_aux_carry_flag(), false);
+        assert_eq!(mcu.get_carry_flag(), true);
+        assert_eq!(mcu.get_overflow_flag(), true);
     }
 }
 
@@ -165,10 +188,16 @@ pub fn test1() {
 }
 
 fn main() {
-    let a: i8 = -5;
-    let b: u8 = a as u8;
-
-    let c: u8 = 254;
-    let d: i8 = c as i8;
-    println!("{} {}", b, d);
+    let mut mcu = MCS51::new();
+    mcu.reset();
+    mcu.set_program(vec![
+        0x74, 0xC3, // Store 0xC3 in Accumulator
+        0x79, 0xAA, // Store 0xFD in R1
+        0x29 //Add R1 to accumulator
+    ]);
+    mcu.clock();
+    mcu.clock_skip();
+    mcu.clock();
+    mcu.clock_skip();
+    mcu.clock();
 }
