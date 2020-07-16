@@ -188,6 +188,10 @@ pub fn test1() {
 }
 
 fn main() {
+    let a: u16 = 0xCDEF;
+    let b: u8 = a as u8;
+    println!("{:0x} {:0x}", a, b);
+
     let mut mcu = MCS51::new();
     mcu.reset();
     mcu.set_program(vec![

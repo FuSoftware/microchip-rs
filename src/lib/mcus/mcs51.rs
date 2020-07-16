@@ -84,11 +84,9 @@ pub enum MCS51_ADDRESSING {
     DIRECT(u8),
     INDIRECT_Ri(u8),
     DATA(u8),
-    DATA_16,
     ADDR_16,
     ADDR_11,
     RELATIVE,
-    BIT,
 }
 
 pub struct MCS51 {
@@ -501,6 +499,23 @@ impl MCS51 {
                 println!("Unsupported addressing mode");
                 return None;
             }
+        }
+    }
+
+    pub fn move_pc(&mut self, addressing: MCS51_ADDRESSING) {
+        let additional_move: u16 = match addressing {
+            MCS51_ADDRESSING::ACCUMULATOR => 0,
+            MCS51_ADDRESSING::REGISTER(_x) => 0,
+            MCS51_ADDRESSING::DIRECT(_x) => 1,
+            MCS51_ADDRESSING::INDIRECT_Ri(_x) => 0,
+            MCS51_ADDRESSING::DATA(_x) => 1,
+            MCS51_ADDRESSING::ADDR_16 => 2,
+            MCS51_ADDRESSING::ADDR_11 => 1,
+            MCS51_ADDRESSING::RELATIVE => 1,
+        };
+
+        if additional_move > 0 {
+            self.pc += additional_move;
         }
     }
 
