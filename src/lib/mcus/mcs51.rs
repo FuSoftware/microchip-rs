@@ -96,6 +96,7 @@ pub struct MCS51 {
     pub special_function_registers: [u8; MCS51_REGISTERS::REGISTER_COUNT as usize],
     pub ram: [u8; 255],
     pub stack: Vec<u8>,
+    pub additional_cycles: u8,
 }
 
 impl MCS51 {
@@ -107,6 +108,7 @@ impl MCS51 {
             program: vec![],
             stack: vec![],
             special_function_registers: [0; MCS51_REGISTERS::REGISTER_COUNT as usize],
+            additional_cycles: 0
         }
     }
 
@@ -370,6 +372,7 @@ impl MCS51 {
         self.pc = 0;
         self.user_registers = [0; 8];
         self.ram = [0; 255];
+        self.additional_cycles = 0;
         self.reset_registers();
     }
 
@@ -403,13 +406,22 @@ impl MCS51 {
     }
 
     pub fn clock(&mut self) {
-        let opcode = self.program[self.pc as usize];
-        self.opcode_dispatch(opcode);
-        self.pc = self.pc + 1;
+        if self.additional_cycles > 0 {
+            self.additional_cycles -= 1;
+        } else {
+            self.next_instruction();
+        }        
     }
 
-    pub fn clock_skip(&mut self) {
-        self.pc = self.pc + 1;
+    pub fn next_instruction(&mut self) {
+        let opcode = self.program[self.pc as usize];
+        //self.opcode_dispatch_old(opcode);
+        let operation = MCS51::opcode_dispatch(opcode);
+        operation.3(self);
+        self.additional_cycles = operation.1;
+        self.pc = self.pc + 1 + operation.2;
+
+        //println!("{:0x} : {}", opcode, operation.0);
     }
 
     pub fn set_u8(&mut self, addressing: MCS51_ADDRESSING, value: u8) {
@@ -502,24 +514,106 @@ impl MCS51 {
         }
     }
 
-    pub fn move_pc(&mut self, addressing: MCS51_ADDRESSING) {
-        let additional_move: u16 = match addressing {
-            MCS51_ADDRESSING::ACCUMULATOR => 0,
-            MCS51_ADDRESSING::REGISTER(_x) => 0,
-            MCS51_ADDRESSING::DIRECT(_x) => 1,
-            MCS51_ADDRESSING::INDIRECT_Ri(_x) => 0,
-            MCS51_ADDRESSING::DATA(_x) => 1,
-            MCS51_ADDRESSING::ADDR_16 => 2,
-            MCS51_ADDRESSING::ADDR_11 => 1,
-            MCS51_ADDRESSING::RELATIVE => 1,
-        };
-
-        if additional_move > 0 {
-            self.pc += additional_move;
-        }
+    pub fn opcode_dispatch(opcode: u8) -> (&'static str, u8, u16,  fn(&mut MCS51)) {
+        // Label, OP, additional cycles, additional PC moves
+        return match opcode {
+            0x00 => ("NOP",     1, 0, |cpu| cpu.op_nop()),
+            0x01 => ("AJMP",    1, 0, |cpu| cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11)),
+            0x02 => ("LJMP",    1, 0, |cpu| cpu.op_ljmp(MCS51_ADDRESSING::ADDR_16)),
+            0x03 => ("RR",      0, 0, |cpu| cpu.op_rr()),
+            0x04 => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::ACCUMULATOR)),
+            0x05 => ("INC",     0, 1, |cpu| cpu.op_inc(MCS51_ADDRESSING::DIRECT(1))),
+            0x06 => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::INDIRECT_Ri(0))),
+            0x07 => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::INDIRECT_Ri(1))),
+            0x08 => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(0))),
+            0x09 => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(1))),
+            0x0A => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(2))),
+            0x0B => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(3))),
+            0x0C => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(4))),
+            0x0D => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(5))),
+            0x0E => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(6))),
+            0x0F => ("INC",     0, 0, |cpu| cpu.op_inc(MCS51_ADDRESSING::REGISTER(7))),
+            0x10 => ("JBC",     1, 0, |cpu| cpu.op_jbc(MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2))),
+            0x11 => ("ACALL",   1, 0, |cpu| cpu.op_acall(MCS51_ADDRESSING::ADDR_11)),
+            0x12 => ("LCALL",   1, 0, |cpu| cpu.op_lcall(MCS51_ADDRESSING::ADDR_16)),
+            0x13 => ("RRC",     0, 0, |cpu| cpu.op_rrc()),
+            0x14 => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::ACCUMULATOR)),
+            0x15 => ("DEC",     0, 1, |cpu| cpu.op_dec(MCS51_ADDRESSING::DIRECT(1))),
+            0x16 => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::INDIRECT_Ri(0))),
+            0x17 => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::INDIRECT_Ri(1))),
+            0x18 => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(0))),
+            0x19 => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(1))),
+            0x1A => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(2))),
+            0x1B => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(3))),
+            0x1C => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(4))),
+            0x1D => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(5))),
+            0x1E => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(6))),
+            0x1F => ("DEC",     0, 0, |cpu| cpu.op_dec(MCS51_ADDRESSING::REGISTER(7))),
+            0x20 => ("JB",      1, 0, |cpu| cpu.op_jb(MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2))),
+            0x21 => ("AJMP",    1, 0, |cpu| cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11)),
+            0x22 => ("RET",     1, 0, |cpu| cpu.op_ret()),
+            0x23 => ("RL",      0, 0, |cpu| cpu.op_rl()),
+            0x24 => ("ADD",     0, 1, |cpu| cpu.op_add(MCS51_ADDRESSING::DATA(1))),
+            0x25 => ("ADD",     0, 1, |cpu| cpu.op_add(MCS51_ADDRESSING::DIRECT(1))),
+            0x26 => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::INDIRECT_Ri(0))),
+            0x27 => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::INDIRECT_Ri(1))),
+            0x28 => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(0))),
+            0x29 => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(1))),
+            0x2A => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(2))),
+            0x2B => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(3))),
+            0x2C => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(4))),
+            0x2D => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(5))),
+            0x2E => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(6))),
+            0x2F => ("ADD",     0, 0, |cpu| cpu.op_add(MCS51_ADDRESSING::REGISTER(7))),
+            0x30 => ("JNB",     1, 0, |cpu| cpu.op_jnb(MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2))),
+            0x31 => ("ACALL",   1, 0, |cpu| cpu.op_acall(MCS51_ADDRESSING::ADDR_11)),
+            0x32 => ("RETI",    1, 0, |cpu| cpu.op_reti()),
+            0x33 => ("RLC",     1, 0, |cpu| cpu.op_rlc()),
+            0x34 => ("ADDC",    0, 1, |cpu| cpu.op_addc(MCS51_ADDRESSING::DATA(1))),
+            0x35 => ("ADDC",    0, 1, |cpu| cpu.op_addc(MCS51_ADDRESSING::DIRECT(1))),
+            0x36 => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::INDIRECT_Ri(0))),
+            0x37 => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::INDIRECT_Ri(1))),
+            0x38 => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(0))),
+            0x39 => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(1))),
+            0x3A => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(2))),
+            0x3B => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(3))),
+            0x3C => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(4))),
+            0x3D => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(5))),
+            0x3E => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(6))),
+            0x3F => ("ADDC",    0, 0, |cpu| cpu.op_addc(MCS51_ADDRESSING::REGISTER(7))),
+            0x40 => ("JC",      1, 0, |cpu| cpu.op_jc(MCS51_ADDRESSING::DATA(1))),
+            0x41 => ("AJMP",    1, 0, |cpu| cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11)),
+            0x42 => ("ORL",     0, 1, |cpu| cpu.op_orl(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::ACCUMULATOR)),
+            0x43 => ("ORL",     1, 2, |cpu| cpu.op_orl(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(2))),
+            0x44 => ("ORL",     0, 1, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1))),
+            0x45 => ("ORL",     0, 1, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DIRECT(1))),
+            0x46 => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0))),
+            0x47 => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1))),
+            0x48 => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(0))),
+            0x49 => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(1))),
+            0x4A => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(2))),
+            0x4B => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(3))),
+            0x4C => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(4))),
+            0x4D => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(5))),
+            0x4E => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(6))),
+            0x4F => ("ORL",     0, 0, |cpu| cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(7))),
+            0x74 => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1))),
+            0x75 => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(1))),
+            0x76 => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::INDIRECT_Ri(0), MCS51_ADDRESSING::DATA(1))),
+            0x77 => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::INDIRECT_Ri(1), MCS51_ADDRESSING::DATA(1))),
+            0x78 => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1))),
+            0x79 => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1))),
+            0x7A => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1))),
+            0x7B => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1))),
+            0x7C => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1))),
+            0x7D => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1))),
+            0x7E => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1))),
+            0x7F => ("MOV",     0, 1, |cpu| cpu.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1))),
+            _ => ("NONE", 0, 0, |_cpu| println!("Unknown OPCODE"))
+        }  
     }
 
-    pub fn opcode_dispatch(&mut self, opcode: u8) {
+    pub fn opcode_dispatch_old(&mut self, opcode: u8) {
         match opcode {
             0x00 => self.op_nop(),
             0x01 => self.op_ajmp(MCS51_ADDRESSING::ADDR_11),
@@ -704,8 +798,8 @@ impl MCS51 {
 
     pub fn op_lcall(&mut self, addr16: MCS51_ADDRESSING) {
         self.pc = self.pc + 2;
-        self.stack.push((self.pc & 0xFF) as u8);
-        self.stack.push(((self.pc >> 2) & 0xFF) as u8);
+        self.push_stack((self.pc & 0xFF) as u8);
+        self.push_stack(((self.pc >> 2) & 0xFF) as u8);
         self.pc = self.get_u16(addr16).unwrap();
     }
 
@@ -759,8 +853,8 @@ impl MCS51 {
     }
 
     pub fn op_ret(&mut self) {
-        let pc_lo = self.pop_stack();
         let pc_hi = self.pop_stack();
+        let pc_lo = self.pop_stack();
         self.pc = (pc_hi as u16) << 8 + pc_lo as u16;
     }
 

@@ -49,23 +49,23 @@ mod tests {
             0x19, // Decrement Register 1
             0x09, // Increment Register 1
         ]);
-        mcu.clock();
+        mcu.next_instruction();
         assert_eq!(mcu.get_accumulator(), 1);
-        mcu.clock();
-        mcu.clock();
+        mcu.next_instruction();
+        mcu.next_instruction();
         assert_eq!(mcu.get_accumulator(), 3);
-        mcu.clock();
-        mcu.clock();
+        mcu.next_instruction();
+        mcu.next_instruction();
         assert_eq!(mcu.read_register(1), 2);
-        mcu.clock();
-        mcu.clock();
+        mcu.next_instruction();
+        mcu.next_instruction();
         assert_eq!(mcu.get_accumulator(), 1);
-        mcu.clock();
+        mcu.next_instruction();
         assert_eq!(mcu.read_register(1), 1);
 
         //Switch bank
         mcu.write(0xD0, 0b00001000);
-        mcu.clock();
+        mcu.next_instruction();
         assert_eq!(mcu.read_register(1), 1);
     }
 
@@ -121,15 +121,13 @@ mod tests {
             0x79, 0xFD, // Store 0xFD in R1
         ]);
         for _i in 0..6 {
-            mcu.clock();
+            mcu.next_instruction();
         }
 
-        mcu.clock();
-        mcu.clock_skip();
+        mcu.next_instruction();
         assert_eq!(mcu.get_accumulator(), 0xFE);
 
-        mcu.clock();
-        mcu.clock_skip();
+        mcu.next_instruction();
         assert_eq!(mcu.read_register(1), 0xFD);
     }
 
@@ -139,14 +137,12 @@ mod tests {
         mcu.reset();
         mcu.set_program(vec![
             0x74, 0xC3, // Store 0xC3 in Accumulator
-            0x79, 0xAA, // Store 0xFD in R1
+            0x79, 0xAA, // Store 0xAA in R1
             0x29 //Add R1 to accumulator
         ]);
-        mcu.clock();
-        mcu.clock_skip();
-        mcu.clock();
-        mcu.clock_skip();
-        mcu.clock();
+        mcu.next_instruction();
+        mcu.next_instruction();
+        mcu.next_instruction();
         assert_eq!(mcu.read_register(1), 0xAA);
         assert_eq!(mcu.get_accumulator(), 0x6D);
         assert_eq!(mcu.get_aux_carry_flag(), false);
@@ -188,20 +184,33 @@ pub fn test1() {
 }
 
 fn main() {
-    let a: u16 = 0xCDEF;
-    let b: u8 = a as u8;
-    println!("{:0x} {:0x}", a, b);
-
     let mut mcu = MCS51::new();
     mcu.reset();
     mcu.set_program(vec![
-        0x74, 0xC3, // Store 0xC3 in Accumulator
-        0x79, 0xAA, // Store 0xFD in R1
-        0x29 //Add R1 to accumulator
+        0x04, // Increment Accumulator
+        0x04, // Increment Accumulator
+        0x04, // Increment Accumulator
+        0x09, // Increment Register 1
+        0x09, // Increment Register 1
+        0x09, // Increment Register 1
+        0x74, 0xFE, // Store 0xFE in accumulator
+        0x79, 0xFD, // Store 0xFD in R1
+        0x02, 0x00, 0x00 // Jump to beginning
     ]);
-    mcu.clock();
-    mcu.clock_skip();
-    mcu.clock();
-    mcu.clock_skip();
-    mcu.clock();
+
+    let now = Instant::now();
+    for _i in 0..1000000 {
+        mcu.clock();
+    }
+    let time_us = now.elapsed().as_micros();
+    let time_ns = now.elapsed().as_nanos();
+    let time_us_inst = time_us as f64 / 1000000.0;
+    let time_ns_inst = time_ns as f64 / 1000000.0;
+    println!(
+        "({:.3}us/clk) ({:.3}ns/clk) ({:.3} MHz) ({:.3} KHz)", 
+        time_us_inst,
+        time_ns_inst,
+        1.0/time_ns_inst,
+        1.0/time_us_inst
+    );
 }
