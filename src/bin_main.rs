@@ -184,33 +184,36 @@ pub fn test1() {
 }
 
 fn main() {
-    let mut mcu = MCS51::new();
-    mcu.reset();
-    mcu.set_program(vec![
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x09, // Increment Register 1
-        0x09, // Increment Register 1
-        0x09, // Increment Register 1
-        0x74, 0xFE, // Store 0xFE in accumulator
-        0x79, 0xFD, // Store 0xFD in R1
-        0x02, 0x00, 0x00 // Jump to beginning
-    ]);
+    for _j in 0..10 {
+        let mut mcu = MCS51::new();
+        mcu.reset();
+        mcu.set_program(vec![
+            0x04, // Increment Accumulator
+            0x04, // Increment Accumulator
+            0x04, // Increment Accumulator
+            0x09, // Increment Register 1
+            0x09, // Increment Register 1
+            0x09, // Increment Register 1
+            0x74, 0xFE, // Store 0xFE in accumulator
+            0x79, 0xFD, // Store 0xFD in R1
+            0x02, 0x00, 0x00 // Jump to beginning
+        ]);
 
-    let now = Instant::now();
-    for _i in 0..1000000 {
-        mcu.clock();
+        let iterations = 1000000;
+        let now = Instant::now();
+        for _i in 0..iterations {
+            mcu.next_instruction();
+        }
+        let time_us = now.elapsed().as_micros();
+        let time_ns = now.elapsed().as_nanos();
+        let time_us_inst = time_us as f64 / iterations as f64;
+        let time_ns_inst = time_ns as f64 / iterations as f64;
+        println!(
+            "({:.3}us/inst) ({:.3}ns/inst) ({:.3} MHz) ({:.3} KHz)", 
+            time_us_inst,
+            time_ns_inst,
+            1.0/time_ns_inst,
+            1.0/time_us_inst
+        );
     }
-    let time_us = now.elapsed().as_micros();
-    let time_ns = now.elapsed().as_nanos();
-    let time_us_inst = time_us as f64 / 1000000.0;
-    let time_ns_inst = time_ns as f64 / 1000000.0;
-    println!(
-        "({:.3}us/clk) ({:.3}ns/clk) ({:.3} MHz) ({:.3} KHz)", 
-        time_us_inst,
-        time_ns_inst,
-        1.0/time_ns_inst,
-        1.0/time_us_inst
-    );
 }

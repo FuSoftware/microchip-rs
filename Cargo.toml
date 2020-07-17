@@ -8,3 +8,18 @@ edition = "2018"
 
 [profile.release]
 debug = true
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false
+
+[lib]
+name = "microchip_rs"
+path = "src/lib_main.rs"
+
+[[bin]]
+name = "microchip_rs_bin"
+path = "src/bin_main.rs"

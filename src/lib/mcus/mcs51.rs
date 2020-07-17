@@ -342,8 +342,8 @@ impl MCS51 {
     }
 
     pub fn get_current_register_bank(&self) -> u8 {
-        let pr = self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
-        let bank = pr >> 3 & 0b11;
+        let psw = self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
+        let bank = *psw >> 3 & 0b11;
         return bank;
     }
 
@@ -610,27 +610,17 @@ impl MCS51 {
 
     pub fn next_instruction(&mut self) {
         let opcode = self.program[self.pc as usize];
-        //self.opcode_dispatch_old(opcode);
-        //let operation = MCS51::opcode_dispatch(opcode);
         let operation = self.opcode_dispatch(opcode);
         operation.3(self);
         self.additional_cycles = operation.1;
         self.pc = self.pc + 1 + operation.2;
-
-        //println!("{:0x} : {}", opcode, operation.0);
     }
 
     pub fn set_u8(&mut self, addressing: MCS51_ADDRESSING, value: u8) {
         match addressing {
             MCS51_ADDRESSING::ACCUMULATOR => self.write_sfr(MCS51_REGISTERS::ACC, value),
             MCS51_ADDRESSING::REGISTER(reg) => self.write_register(reg, value),
-            MCS51_ADDRESSING::DIRECT(offset) => self.write(
-                *self
-                    .program
-                    .get(self.pc as usize + offset as usize)
-                    .unwrap(),
-                value,
-            ),
+            MCS51_ADDRESSING::DIRECT(offset) => self.write(*self.program.get(self.pc as usize + offset as usize).unwrap(),value),
             MCS51_ADDRESSING::INDIRECT_Ri(reg) => self.write(self.read_register(reg), value),
             _ => {
                 println!("Unsupported addressing mode");
@@ -642,25 +632,11 @@ impl MCS51 {
         match addressing {
             MCS51_ADDRESSING::ACCUMULATOR => Some(*self.read_sfr(MCS51_REGISTERS::ACC).unwrap()),
             MCS51_ADDRESSING::REGISTER(reg) => Some(self.read_register(reg)),
-            MCS51_ADDRESSING::DIRECT(offset) => Some(
-                *self
-                    .read(
-                        *self
-                            .program
-                            .get(self.pc as usize + offset as usize)
-                            .unwrap(),
-                    )
-                    .unwrap(),
-            ),
+            MCS51_ADDRESSING::DIRECT(offset) => Some(*self.read(*self.program.get(self.pc as usize + offset as usize).unwrap()).unwrap()),
             MCS51_ADDRESSING::INDIRECT_Ri(reg) => {
                 Some(*self.read(self.read_register(reg)).unwrap())
             }
-            MCS51_ADDRESSING::DATA(offset) => Some(
-                *self
-                    .program
-                    .get(self.pc as usize + offset as usize)
-                    .unwrap(),
-            ),
+            MCS51_ADDRESSING::DATA(offset) => Some(*self.program.get(self.pc as usize + offset as usize).unwrap()),
             _ => {
                 println!("Unsupported addressing mode");
                 return None;
@@ -683,9 +659,17 @@ impl MCS51 {
     pub fn get_u16(&self, addressing: MCS51_ADDRESSING) -> Option<u16> {
         match addressing {
             MCS51_ADDRESSING::ADDR_16 => {
-                let hi_byte = *self.program.get(self.pc as usize + 1).unwrap();
-                let lo_byte = *self.program.get(self.pc as usize + 2).unwrap();
+                let offset: usize = self.pc as usize + 1;
+                /*
+                let hi_byte = *self.program.get(offset).unwrap();
+                let lo_byte = *self.program.get(offset as usize + 1).unwrap();
                 let addr: u16 = (hi_byte as u16) << 8 + lo_byte as u16;
+                */
+                
+                let mut data: [u8; 2] = [0; 2];
+                data.copy_from_slice(&self.program[offset..offset+2]);
+                let addr = u16::from_be_bytes(data);
+
                 return Some(addr);
             }
             _ => {
@@ -855,7 +839,7 @@ impl MCS51 {
     pub fn op_acall(&mut self, addr11: MCS51_ADDRESSING) {
         self.pc = self.pc + 2;
         self.stack.push((self.pc & 0xFF) as u8);
-        self.stack.push(((self.pc >> 2) & 0xFF) as u8);
+        self.stack.push(((self.pc >> 8) & 0xFF) as u8);
         self.pc &= 0xF800;
         self.pc += self.get_u11(addr11).unwrap();
     }
@@ -968,12 +952,7 @@ impl MCS51 {
     // Decrement
     pub fn op_dec(&mut self, operand: MCS51_ADDRESSING) {
         let op = self.get_u8(operand).unwrap();
-        // No carry flag set
-        if op == 0 {
-            self.set_u8(operand, 255);
-        } else {
-            self.set_u8(operand, op - 1);
-        }
+        self.set_u8(operand, op.wrapping_sub(1)); 
     }
 
     pub fn op_dec_u16(&mut self, operand: MCS51_ADDRESSING) {
@@ -995,12 +974,7 @@ impl MCS51 {
     // Increment
     pub fn op_inc(&mut self, operand: MCS51_ADDRESSING) {
         let op = self.get_u8(operand).unwrap();
-        // No carry flag set
-        if op == 255 {
-            self.set_u8(operand, 0);
-        } else {
-            self.set_u8(operand, op + 1);
-        }
+        self.set_u8(operand, op.wrapping_add(1));        
     }
 
     pub fn op_inc_u16(&mut self, operand: MCS51_ADDRESSING) {
