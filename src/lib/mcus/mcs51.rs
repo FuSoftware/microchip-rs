@@ -265,6 +265,122 @@ impl MCS51 {
         mcs51.instructions[0x4F] = ("ORL", 0, 0, |cpu| {
             cpu.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(7))
         });
+        mcs51.instructions[0x50] = ("JNC", 1, 0, |cpu| {
+            cpu.op_jnc(MCS51_ADDRESSING::DATA(1))
+        });
+        mcs51.instructions[0x51] = ("ACALL", 1, 0, |cpu| {
+            cpu.op_acall(MCS51_ADDRESSING::ADDR_11)
+        });
+        mcs51.instructions[0x52] = ("ANL", 0, 1, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::ACCUMULATOR)
+        });
+        mcs51.instructions[0x53] = ("ANL", 1, 2, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(2))
+        });
+        mcs51.instructions[0x54] = ("ANL", 0, 1, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1))
+        });
+        mcs51.instructions[0x55] = ("ANL", 0, 1, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DIRECT(1))
+        });
+        mcs51.instructions[0x56] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(
+                MCS51_ADDRESSING::ACCUMULATOR,
+                MCS51_ADDRESSING::INDIRECT_Ri(0),
+            )
+        });
+        mcs51.instructions[0x57] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(
+                MCS51_ADDRESSING::ACCUMULATOR,
+                MCS51_ADDRESSING::INDIRECT_Ri(1),
+            )
+        });
+        mcs51.instructions[0x58] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(0))
+        });
+        mcs51.instructions[0x59] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(1))
+        });
+        mcs51.instructions[0x5A] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(2))
+        });
+        mcs51.instructions[0x5B] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(3))
+        });
+        mcs51.instructions[0x5C] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(4))
+        });
+        mcs51.instructions[0x5D] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(5))
+        });
+        mcs51.instructions[0x5E] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(6))
+        });
+        mcs51.instructions[0x5F] = ("ANL", 0, 0, |cpu| {
+            cpu.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(7))
+        });
+        mcs51.instructions[0x60] = ("JZ", 1, 0, |cpu| cpu.op_jz(MCS51_ADDRESSING::DATA(1)));
+        mcs51.instructions[0x61] = ("AJMP", 1, 0, |cpu| cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11));
+        mcs51.instructions[0x62] = ("XRL", 0, 1, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::ACCUMULATOR)
+        });
+        mcs51.instructions[0x43] = ("XRL", 1, 2, |cpu| {
+            cpu.op_orl(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(2))
+        });
+        mcs51.instructions[0x44] = ("XRL", 0, 1, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1))
+        });
+        mcs51.instructions[0x45] = ("XRL", 0, 1, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DIRECT(1))
+        });
+        mcs51.instructions[0x46] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(
+                MCS51_ADDRESSING::ACCUMULATOR,
+                MCS51_ADDRESSING::INDIRECT_Ri(0),
+            )
+        });
+        mcs51.instructions[0x47] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(
+                MCS51_ADDRESSING::ACCUMULATOR,
+                MCS51_ADDRESSING::INDIRECT_Ri(1),
+            )
+        });
+        mcs51.instructions[0x68] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(0))
+        });
+        mcs51.instructions[0x69] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(1))
+        });
+        mcs51.instructions[0x6A] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(2))
+        });
+        mcs51.instructions[0x6B] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(3))
+        });
+        mcs51.instructions[0x6C] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(4))
+        });
+        mcs51.instructions[0x6D] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(5))
+        });
+        mcs51.instructions[0x6E] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(6))
+        });
+        mcs51.instructions[0x6F] = ("XRL", 0, 0, |cpu| {
+            cpu.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(7))
+        });
+        mcs51.instructions[0x70] = ("JNZ", 1, 0, |cpu| {
+            cpu.op_jnz(MCS51_ADDRESSING::DATA(1))
+        });
+        mcs51.instructions[0x71] = ("ACALL", 1, 0, |cpu| {
+            cpu.op_acall(MCS51_ADDRESSING::ADDR_11)
+        });
+        mcs51.instructions[0x72] = ("ORL", 1, 1, |cpu| {
+            cpu.op_orl_c(MCS51_ADDRESSING::DATA(1), false)
+        });
+        mcs51.instructions[0x73] = ("JMP", 1, 0, |cpu| {
+            cpu.op_jmp()
+        });
         mcs51.instructions[0x74] = ("MOV", 0, 1, |cpu| {
             cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1))
         });
@@ -300,6 +416,69 @@ impl MCS51 {
         });
         mcs51.instructions[0x7F] = ("MOV", 0, 1, |cpu| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1))
+        });
+        mcs51.instructions[0x80] = ("SJMP", 1, 0, |cpu| 
+            cpu.op_sjmp(MCS51_ADDRESSING::DATA(1))
+        );
+        mcs51.instructions[0x81] = ("AJMP", 1, 0, |cpu| 
+            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11)
+        );
+        mcs51.instructions[0x82] = ("ANL", 1, 1, |cpu| 
+            cpu.op_anl_c(MCS51_ADDRESSING::DATA(1), false)
+        );
+        mcs51.instructions[0x83] = ("MOVC", 1, 0, |cpu| 
+            cpu.op_movc_pc()
+        );
+        mcs51.instructions[0x84] = ("DIV", 3, 0, |cpu| 
+            cpu.op_div()
+        );
+        mcs51.instructions[0x85] = ("MOV", 1, 2, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DIRECT(2))
+        );
+        mcs51.instructions[0x86] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::INDIRECT_Ri(0))
+        );
+        mcs51.instructions[0x87] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::INDIRECT_Ri(1))
+        );
+        mcs51.instructions[0x88] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(0))
+        );
+        mcs51.instructions[0x89] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(1))
+        );
+        mcs51.instructions[0x8A] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(2))
+        );
+        mcs51.instructions[0x8B] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(3))
+        );
+        mcs51.instructions[0x8C] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(4))
+        );
+        mcs51.instructions[0x8D] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(5))
+        );
+        mcs51.instructions[0x8E] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(6))
+        );
+        mcs51.instructions[0x8F] = ("MOV", 1, 1, |cpu| 
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(7))
+        );
+        mcs51.instructions[0x90] = ("MOV", 1, 2, |cpu| 
+            cpu.op_mov_dptr(MCS51_ADDRESSING::DATA(1))
+        );
+        mcs51.instructions[0x91] = ("ACALL", 1, 0, |cpu| {
+            cpu.op_acall(MCS51_ADDRESSING::ADDR_11)
+        });
+        mcs51.instructions[0x92] = ("MOV", 1, 1, |cpu| {
+            cpu.op_mov_bit_c(MCS51_ADDRESSING::DATA(1))
+        });
+        mcs51.instructions[0x93] = ("MOVC", 1, 0, |cpu| {
+            cpu.op_movc_dptr()
+        });
+        mcs51.instructions[0x94] = ("SUBB", 1, 0, |cpu| {
+            cpu.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1))
         });
 
         mcs51
@@ -355,6 +534,10 @@ impl MCS51 {
     pub fn write_register(&mut self, register: u8, value: u8) {
         let bank = self.get_current_register_bank();
         self.ram[register as usize + 0x08 * bank as usize] = value;
+    }
+
+    pub fn read_code_byte(&mut self, addr: usize) -> u8 {
+        return self.program[addr];
     }
 
     /*
@@ -510,6 +693,18 @@ impl MCS51 {
             0xF0 => self.special_function_registers[MCS51_REGISTERS::B as usize] = value,
             _ => (),
         }
+    }
+
+    pub fn set_dptr(&mut self, value: u16) {
+        self.write_sfr(MCS51_REGISTERS::DPH, (value >> 8) as u8);
+        self.write_sfr(MCS51_REGISTERS::DPL, value as u8 & 0xFF);
+    }
+
+    pub fn get_dptr(&mut self) -> u16 {
+        let dph = *self.read_sfr(MCS51_REGISTERS::DPH).unwrap();
+        let dpl = *self.read_sfr(MCS51_REGISTERS::DPL).unwrap();
+
+        return ((dph as u16) << 8) + dpl as u16;
     }
 
     pub fn set_carry_flag(&mut self, value: bool) {
@@ -672,6 +867,14 @@ impl MCS51 {
 
                 return Some(addr);
             }
+            MCS51_ADDRESSING::DATA(off) => {
+                let offset: usize = self.pc as usize + off as usize;
+
+                let mut data: [u8; 2] = [0; 2];
+                data.copy_from_slice(&self.program[offset..offset+2]);
+                let dat = u16::from_be_bytes(data);
+                return Some(dat);
+            }
             _ => {
                 println!("Unsupported addressing mode");
                 return None;
@@ -800,6 +1003,135 @@ impl MCS51 {
             0x7F => self.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1)),
             _ => println!("Unknown OPCODE"),
         }
+    }
+
+    pub fn op_mov_c_bit(&mut self, bit_addr: MCS51_ADDRESSING) {
+        let bit = self.read_bit(self.get_u8(bit_addr).unwrap());
+        self.set_carry_flag(bit);
+    }
+
+    pub fn op_mov_bit_c(&mut self, bit_addr: MCS51_ADDRESSING) {
+        let cf = self.get_carry_flag();
+        self.write_bit(self.get_u8(bit_addr).unwrap(), cf);
+    }
+
+    pub fn op_mov_dptr(&mut self, data16: MCS51_ADDRESSING) {
+        let data = self.get_u16(data16).unwrap();
+        self.set_dptr(data);
+    }
+
+    pub fn op_div(&mut self) {
+        let b = *self.read_sfr(MCS51_REGISTERS::B).unwrap();
+        self.set_carry_flag(false);
+
+        if b == 0 {
+            self.set_overflow_flag(true);
+        } else {
+            self.set_overflow_flag(false);
+            let a = self.get_accumulator();
+            let result = a / b;
+            let remainder = a % b;
+
+            self.set_accumulator(result);
+            self.write_sfr(MCS51_REGISTERS::B, remainder);
+        }        
+    }
+
+    pub fn op_movc_pc(&mut self) {
+        let pc = self.pc + 1;
+        let acc = self.get_accumulator() as u16;
+        let value = self.read_code_byte((pc + acc) as usize);
+        self.set_accumulator(value);
+
+    }
+
+    pub fn op_movc_dptr(&mut self) {
+        let acc = self.get_accumulator() as u16;
+        let dptr = self.get_dptr();
+        let value = self.read_code_byte((dptr + acc) as usize);
+        self.set_accumulator(value);
+    }
+
+    pub fn op_jmp(&mut self) {
+        let acc = self.get_accumulator() as u16;
+        let dptr = self.get_dptr();
+        let new_pc = dptr.wrapping_add(acc);
+
+        self.pc = new_pc;
+    }
+
+    pub fn op_jnz(&mut self, code_addr: MCS51_ADDRESSING) {
+        let acc = self.get_accumulator();
+        self.pc = self.pc + 2;
+
+        if acc != 0 {
+            let code = self.get_u8(code_addr).unwrap();
+            self.write_pc_rel(code as u16, code & 0x80 != 0)
+        }
+    }
+
+    pub fn op_jz(&mut self, code_addr: MCS51_ADDRESSING) {
+        let acc = self.get_accumulator();
+        self.pc = self.pc + 2;
+
+        if acc == 0 {
+            let code = self.get_u8(code_addr).unwrap();
+            self.write_pc_rel(code as u16, code & 0x80 != 0)
+        }
+    }
+
+    pub fn op_jnc(&mut self, code_addr: MCS51_ADDRESSING) {
+        let cf = self.get_carry_flag();
+        self.pc = self.pc + 2;
+
+        if !cf {
+            let code = self.get_u8(code_addr).unwrap();
+            self.write_pc_rel(code as u16, code & 0x80 != 0)
+        }
+    }
+
+    pub fn op_anl_c(&mut self, addr: MCS51_ADDRESSING, complement: bool) {
+        let bit = self.read_bit(self.get_u8(addr).unwrap());
+        let mut cf = self.get_carry_flag();
+
+        if complement {
+            cf = cf & !bit;
+        } else {
+            cf = cf & bit;
+        }
+
+        self.set_carry_flag(cf);
+    }
+
+    pub fn op_anl(&mut self, dest: MCS51_ADDRESSING, src: MCS51_ADDRESSING) {
+        let op1 = self.get_u8(src).unwrap();
+        let op2 = self.get_u8(dest).unwrap();
+
+        let result = op1 & op2;
+
+        self.set_u8(dest, result);
+    }
+
+    pub fn op_xrl(&mut self, dest: MCS51_ADDRESSING, src: MCS51_ADDRESSING) {
+        let op1 = self.get_u8(src).unwrap();
+        let op2 = self.get_u8(dest).unwrap();
+
+        let result = op1 ^ op2;
+
+        self.set_u8(dest, result);
+    }
+
+    pub fn op_orl_c(&mut self, addr: MCS51_ADDRESSING, complement: bool) {
+        let bit = self.read_bit(self.get_u8(addr).unwrap());
+        let mut cf = self.get_carry_flag();
+
+        if complement {
+            cf = cf | !bit;
+        } else {
+            cf = cf | bit;
+        }
+
+        self.set_carry_flag(cf);
     }
 
     pub fn op_orl(&mut self, dest: MCS51_ADDRESSING, src: MCS51_ADDRESSING) {
@@ -1026,7 +1358,8 @@ impl MCS51 {
         self.pc = addr;
     }
 
-    pub fn op_sjmp(&mut self, addr_rel: i8) {
+    pub fn op_sjmp(&mut self, addr: MCS51_ADDRESSING) {
+        let addr_rel = self.get_i8(addr).unwrap();
         self.pc = self.pc + 2;
 
         if addr_rel < 0 {
