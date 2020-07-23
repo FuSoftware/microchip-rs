@@ -186,6 +186,7 @@ pub fn test1() {
 fn main() {
     let mut mcu = MCS51::new();
 
+    /*
     mcu.set_program(vec![
         0x04, // Increment Accumulator
         0x04, // Increment Accumulator
@@ -197,17 +198,30 @@ fn main() {
         0x79, 0xFD, // Store 0xFD in R1
         0x02, 0x00, 0x00 // Jump to beginning
     ]);
+    */
+
+    mcu.set_program(vec![
+        0x00, // NOP
+        0x00, // NOP
+        0x00, // NOP
+        0x00, // NOP
+        0x00, // NOP
+        0x00, // NOP
+        0x00, // NOP
+        0x02, 0x00, 0x00 // Jump to beginning
+    ]);
 
     for _j in 0..10 {
         
         mcu.reset();
 
-        let iterations = 10000000;
-        //let now = Instant::now();
+        let iterations = 100000000;
+        let now = Instant::now();
         for _i in 0..iterations {
             mcu.clock();
         }
-        /*
+        
+        
         let time_us = now.elapsed().as_micros();
         let time_ns = now.elapsed().as_nanos();
         let time_us_inst = time_us as f64 / iterations as f64;
@@ -219,7 +233,7 @@ fn main() {
             1.0/time_ns_inst,
             1.0/time_us_inst
         );
-        */
+        
         
     }
 }
