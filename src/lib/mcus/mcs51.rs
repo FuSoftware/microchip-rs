@@ -437,6 +437,13 @@ impl MCS51 {
 
     pub fn next_instruction(&mut self) {
         let opcode = self.program[self.pc as usize];
+        /*
+        let operation = self.opcode_dispatch(opcode);
+        operation.3(self);
+        self.additional_cycles = operation.1;
+        self.pc = self.pc + 1 + operation.2;
+        */
+
         self.opcode_dispatch_new(opcode);
     }
 
@@ -1123,6 +1130,62 @@ impl MCS51 {
                 self.op_movc_dptr();
                 self.opcode_additional_work("MOVC", 1, 0);
             }
+            0x94 => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1));
+                self.opcode_additional_work("SUBB", 0, 1);
+            }
+            0x95 => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DIRECT(1));
+                self.opcode_additional_work("SUBB", 0, 1);
+            }
+            0x96 => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x97 => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x98 => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(0));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x99 => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(1));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x9A => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(2));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x9B => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(3));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x9C => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(4));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x9D => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(5));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x9E => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(6));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0x9F => {
+                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(7));
+                self.opcode_additional_work("SUBB", 0, 0);
+            }
+            0xA0 => {
+                self.op_orl_c(MCS51_ADDRESSING::DATA(1), true);
+                self.opcode_additional_work("ORLC", 1, 1);
+            }
+            0xA1 => {
+                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.opcode_additional_work("AJMP", 1, 1);
+            }
             _ => { 
                 self.op_nop(); 
                 self.opcode_additional_work("UNIMPLEMENTED", 0, 0) 
@@ -1137,10 +1200,6 @@ impl MCS51 {
 
     /*
     */
-
-    pub fn opcode_dispatch(&self, opcode: u8) -> (&'static str, u8, u16, fn(&mut MCS51)) {
-        return self.instructions[opcode as usize];
-    }
 
     pub fn op_mov_c_bit(&mut self, bit_addr: MCS51_ADDRESSING) {
         let bit = self.read_bit(self.get_u8(bit_addr).unwrap());
