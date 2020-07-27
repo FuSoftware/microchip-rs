@@ -540,7 +540,7 @@ impl MCS51 {
         match opcode {
             0x00 => {
                 self.op_nop();
-                self.opcode_additional_work("NOP", 1, 0);
+                self.opcode_additional_work("NOP", 0, 0);
             }
             0x01 => {
                 self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
@@ -1199,7 +1199,28 @@ impl MCS51 {
     }
 
     /*
+    SUBB subtracts the indicated variable and the carry flag together from the Accumulator,leaving the result in the Accumulator. 
+
+    SUBB sets the carry (borrow) flag if a borrow is needed for bit 7, and clears C otherwise. 
+    (If C was set before executing a SUBB instruction, this indicates that a borrow was needed for the previous step in a multiple precision subtraction, so
+    the carry is subtracted from the Accumulator along with the source operand.) AC is set if aborrow is needed for bit 3, 
+    and cleared otherwise. OV is set if a borrow is needed into bit 6, but not into bit 7, or into bit 7, but not bit 6.When subtracting signed integers OV indicates a 
+    negative number produced when a negative value is subtracted from a positive value, or a positive result when a positive number is subtracted from a negative number.
+    The source operand allows four addressing modes: register, direct, register-indirect, or immediate.
+
+    Example
+
+    The Accumulator holds 0C9H (11001001B), register 2 holds 54H (01010100B), and the carryflag is set. 
+    The instruction, SUBB  A,R2     will leave the value 74H (01110100B) in the accumulator, with the carry flag and AC clearedbut OV set. 
+    Notice that 0C9H minus 54H is 75H. The difference between this and the above result is due to the carry (borrow) flag being set before the operation. 
+    If the state of the carry is not knownbefore starting a single or multiple-precision subtraction, 
+    it should be explicitly cleared by a CLR C instruction.
     */
+
+    pub fn op_subb(&mut self, dest_addr: MCS51_ADDRESSING, src_addr: MCS51_ADDRESSING) {
+        let src = self.get_u8(src_addr).unwrap();
+        let acc = self.get_u8(dest_addr).unwrap();
+    }
 
     pub fn op_mov_c_bit(&mut self, bit_addr: MCS51_ADDRESSING) {
         let bit = self.read_bit(self.get_u8(bit_addr).unwrap());

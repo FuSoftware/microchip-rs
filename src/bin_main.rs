@@ -1,5 +1,6 @@
 mod lib;
 use lib::mcus::mcs51::*;
+use lib::decompiler::mcs51::*;
 use lib::mcus::pic16f628a::*;
 use std::time::{Duration, Instant};
 
@@ -183,7 +184,7 @@ pub fn test1() {
     );
 }
 
-fn main() {
+fn test_emulator_mcs51() {
     let mut mcu = MCS51::new();
 
     
@@ -237,4 +238,15 @@ fn main() {
         
         
     }
+}
+
+fn main() {
+    let mut dec = MCS51_Decompiler::new();
+    dec.program = vec![
+        0x02, 0x00, 0xEB
+    ];
+
+    let v = dec.get_instruction(0);
+
+    println!("{}", v);
 }
