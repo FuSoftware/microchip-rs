@@ -451,7 +451,13 @@ impl MCS51 {
         match addressing {
             MCS51_ADDRESSING::ACCUMULATOR => self.write_sfr(MCS51_REGISTERS::ACC, value),
             MCS51_ADDRESSING::REGISTER(reg) => self.write_register(reg, value),
-            MCS51_ADDRESSING::DIRECT(offset) => self.write(*self.program.get(self.pc as usize + offset as usize).unwrap(),value),
+            MCS51_ADDRESSING::DIRECT(offset) => self.write(
+                *self
+                    .program
+                    .get(self.pc as usize + offset as usize)
+                    .unwrap(),
+                value,
+            ),
             MCS51_ADDRESSING::INDIRECT_Ri(reg) => self.write(self.read_register(reg), value),
             _ => {
                 println!("Unsupported addressing mode");
@@ -463,11 +469,25 @@ impl MCS51 {
         match addressing {
             MCS51_ADDRESSING::ACCUMULATOR => Some(*self.read_sfr(MCS51_REGISTERS::ACC).unwrap()),
             MCS51_ADDRESSING::REGISTER(reg) => Some(self.read_register(reg)),
-            MCS51_ADDRESSING::DIRECT(offset) => Some(*self.read(*self.program.get(self.pc as usize + offset as usize).unwrap()).unwrap()),
+            MCS51_ADDRESSING::DIRECT(offset) => Some(
+                *self
+                    .read(
+                        *self
+                            .program
+                            .get(self.pc as usize + offset as usize)
+                            .unwrap(),
+                    )
+                    .unwrap(),
+            ),
             MCS51_ADDRESSING::INDIRECT_Ri(reg) => {
                 Some(*self.read(self.read_register(reg)).unwrap())
             }
-            MCS51_ADDRESSING::DATA(offset) => Some(*self.program.get(self.pc as usize + offset as usize).unwrap()),
+            MCS51_ADDRESSING::DATA(offset) => Some(
+                *self
+                    .program
+                    .get(self.pc as usize + offset as usize)
+                    .unwrap(),
+            ),
             _ => {
                 println!("Unsupported addressing mode");
                 return None;
@@ -496,9 +516,9 @@ impl MCS51 {
                 let lo_byte = *self.program.get(offset as usize + 1).unwrap();
                 let addr: u16 = (hi_byte as u16) << 8 + lo_byte as u16;
                 */
-                
+
                 let mut data: [u8; 2] = [0; 2];
-                data.copy_from_slice(&self.program[offset..offset+2]);
+                data.copy_from_slice(&self.program[offset..offset + 2]);
                 let addr = u16::from_be_bytes(data);
 
                 return Some(addr);
@@ -507,7 +527,7 @@ impl MCS51 {
                 let offset: usize = self.pc as usize + off as usize;
 
                 let mut data: [u8; 2] = [0; 2];
-                data.copy_from_slice(&self.program[offset..offset+2]);
+                data.copy_from_slice(&self.program[offset..offset + 2]);
                 let dat = u16::from_be_bytes(data);
                 return Some(dat);
             }
@@ -534,7 +554,7 @@ impl MCS51 {
     }
 
     /*
-    */
+     */
 
     pub fn opcode_dispatch_new(&mut self, opcode: u8) {
         match opcode {
@@ -819,11 +839,17 @@ impl MCS51 {
                 self.opcode_additional_work("ORL", 0, 1);
             }
             0x46 => {
-                self.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0));
+                self.op_orl(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(0),
+                );
                 self.opcode_additional_work("ORL", 0, 0);
             }
             0x47 => {
-                self.op_orl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1));
+                self.op_orl(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(1),
+                );
                 self.opcode_additional_work("ORL", 0, 0);
             }
             0x48 => {
@@ -883,11 +909,17 @@ impl MCS51 {
                 self.opcode_additional_work("ANL", 0, 1);
             }
             0x56 => {
-                self.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0));
+                self.op_anl(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(0),
+                );
                 self.opcode_additional_work("ANL", 0, 0);
             }
             0x57 => {
-                self.op_anl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1));
+                self.op_anl(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(1),
+                );
                 self.opcode_additional_work("ANL", 0, 0);
             }
             0x58 => {
@@ -947,11 +979,17 @@ impl MCS51 {
                 self.opcode_additional_work("XRL", 0, 1);
             }
             0x66 => {
-                self.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0));
+                self.op_xrl(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(0),
+                );
                 self.opcode_additional_work("XRL", 0, 0);
             }
             0x67 => {
-                self.op_xrl(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1));
+                self.op_xrl(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(1),
+                );
                 self.opcode_additional_work("XRL", 0, 0);
             }
             0x68 => {
@@ -1075,11 +1113,17 @@ impl MCS51 {
                 self.opcode_additional_work("MOV", 1, 2);
             }
             0x86 => {
-                self.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::INDIRECT_Ri(0));
+                self.op_mov(
+                    MCS51_ADDRESSING::DIRECT(1),
+                    MCS51_ADDRESSING::INDIRECT_Ri(0),
+                );
                 self.opcode_additional_work("MOV", 1, 1);
             }
             0x87 => {
-                self.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::INDIRECT_Ri(1));
+                self.op_mov(
+                    MCS51_ADDRESSING::DIRECT(1),
+                    MCS51_ADDRESSING::INDIRECT_Ri(1),
+                );
                 self.opcode_additional_work("MOV", 1, 1);
             }
             0x88 => {
@@ -1139,11 +1183,17 @@ impl MCS51 {
                 self.opcode_additional_work("SUBB", 0, 1);
             }
             0x96 => {
-                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0));
+                self.op_subb(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(0),
+                );
                 self.opcode_additional_work("SUBB", 0, 0);
             }
             0x97 => {
-                self.op_subb(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1));
+                self.op_subb(
+                    MCS51_ADDRESSING::ACCUMULATOR,
+                    MCS51_ADDRESSING::INDIRECT_Ri(1),
+                );
                 self.opcode_additional_work("SUBB", 0, 0);
             }
             0x98 => {
@@ -1186,34 +1236,38 @@ impl MCS51 {
                 self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
                 self.opcode_additional_work("AJMP", 1, 1);
             }
-            _ => { 
-                self.op_nop(); 
-                self.opcode_additional_work("UNIMPLEMENTED", 0, 0) 
+            _ => {
+                self.op_nop();
+                self.opcode_additional_work("UNIMPLEMENTED", 0, 0)
             }
         }
     }
 
     pub fn opcode_additional_work(&mut self, _label: &str, cycles: u8, pc: u16) {
-        if pc > 0 { self.pc += pc };
-        if cycles > 0 { self.additional_cycles = cycles };
+        if pc > 0 {
+            self.pc += pc
+        };
+        if cycles > 0 {
+            self.additional_cycles = cycles
+        };
     }
 
     /*
-    SUBB subtracts the indicated variable and the carry flag together from the Accumulator,leaving the result in the Accumulator. 
+    SUBB subtracts the indicated variable and the carry flag together from the Accumulator,leaving the result in the Accumulator.
 
-    SUBB sets the carry (borrow) flag if a borrow is needed for bit 7, and clears C otherwise. 
+    SUBB sets the carry (borrow) flag if a borrow is needed for bit 7, and clears C otherwise.
     (If C was set before executing a SUBB instruction, this indicates that a borrow was needed for the previous step in a multiple precision subtraction, so
-    the carry is subtracted from the Accumulator along with the source operand.) AC is set if aborrow is needed for bit 3, 
-    and cleared otherwise. OV is set if a borrow is needed into bit 6, but not into bit 7, or into bit 7, but not bit 6.When subtracting signed integers OV indicates a 
+    the carry is subtracted from the Accumulator along with the source operand.) AC is set if aborrow is needed for bit 3,
+    and cleared otherwise. OV is set if a borrow is needed into bit 6, but not into bit 7, or into bit 7, but not bit 6.When subtracting signed integers OV indicates a
     negative number produced when a negative value is subtracted from a positive value, or a positive result when a positive number is subtracted from a negative number.
     The source operand allows four addressing modes: register, direct, register-indirect, or immediate.
 
     Example
 
-    The Accumulator holds 0C9H (11001001B), register 2 holds 54H (01010100B), and the carryflag is set. 
-    The instruction, SUBB  A,R2     will leave the value 74H (01110100B) in the accumulator, with the carry flag and AC clearedbut OV set. 
-    Notice that 0C9H minus 54H is 75H. The difference between this and the above result is due to the carry (borrow) flag being set before the operation. 
-    If the state of the carry is not knownbefore starting a single or multiple-precision subtraction, 
+    The Accumulator holds 0C9H (11001001B), register 2 holds 54H (01010100B), and the carryflag is set.
+    The instruction, SUBB  A,R2     will leave the value 74H (01110100B) in the accumulator, with the carry flag and AC clearedbut OV set.
+    Notice that 0C9H minus 54H is 75H. The difference between this and the above result is due to the carry (borrow) flag being set before the operation.
+    If the state of the carry is not knownbefore starting a single or multiple-precision subtraction,
     it should be explicitly cleared by a CLR C instruction.
     */
 
@@ -1251,7 +1305,7 @@ impl MCS51 {
 
             self.set_accumulator(result);
             self.write_sfr(MCS51_REGISTERS::B, remainder);
-        }        
+        }
     }
 
     pub fn op_movc_pc(&mut self) {
@@ -1259,7 +1313,6 @@ impl MCS51 {
         let acc = self.get_accumulator() as u16;
         let value = self.read_code_byte((pc + acc) as usize);
         self.set_accumulator(value);
-
     }
 
     pub fn op_movc_dptr(&mut self) {
@@ -1501,7 +1554,7 @@ impl MCS51 {
     // Decrement
     pub fn op_dec(&mut self, operand: MCS51_ADDRESSING) {
         let op = self.get_u8(operand).unwrap();
-        self.set_u8(operand, op.wrapping_sub(1)); 
+        self.set_u8(operand, op.wrapping_sub(1));
     }
 
     pub fn op_dec_u16(&mut self, operand: MCS51_ADDRESSING) {
@@ -1523,7 +1576,7 @@ impl MCS51 {
     // Increment
     pub fn op_inc(&mut self, operand: MCS51_ADDRESSING) {
         let op = self.get_u8(operand).unwrap();
-        self.set_u8(operand, op.wrapping_add(1));        
+        self.set_u8(operand, op.wrapping_add(1));
     }
 
     pub fn op_inc_u16(&mut self, operand: MCS51_ADDRESSING) {
