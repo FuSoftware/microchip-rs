@@ -2,6 +2,8 @@ mod lib;
 use lib::mcus::mcs51::*;
 use lib::decompiler::mcs51::*;
 use lib::mcus::pic16f628a::*;
+use std::fs::File;
+use std::io::Read;
 use std::time::{Duration, Instant};
 
 #[cfg(test)]
@@ -240,13 +242,23 @@ fn test_emulator_mcs51() {
     }
 }
 
+fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
+    let mut f = File::open(filename).expect("no file found");
+    let metadata = std::fs::metadata(filename).expect("unable to read metadata");
+    let mut buffer = vec![0; metadata.len() as usize];
+    f.read(&mut buffer).expect("buffer overflow");
+
+    buffer
+}
+
 fn main() {
     let mut dec = MCS51_Decompiler::new();
-    dec.program = vec![
-        0x02, 0x00, 0xEB
-    ];
+    dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
 
-    let v = dec.get_instruction(0);
-
-    println!("{}", v);
+    let mut next: u16 = 0;
+    for _i in 0..255 {
+        let v = dec.get_instruction(next);
+        println!("{}", v);
+        next = v.next[0];
+    }
 }
