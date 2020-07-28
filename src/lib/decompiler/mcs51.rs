@@ -111,7 +111,7 @@ impl MCS51_Decompiler {
                 let new_address: u16 = if code_addr & 0x80 > 0 {
                     address.wrapping_sub((code_addr as i8 * -1) as u16) + 3
                 } else {
-                    address.wrapping_add(code_addr as u16) + 2
+                    address.wrapping_add(code_addr as u16) + 3
                 };
 
                 return MCS51_Decompiler_Instruction {
@@ -122,6 +122,16 @@ impl MCS51_Decompiler {
                 };
             }
 
+            0x28..=0x2F => {
+                let register = opcode & 0x7;
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16],
+                    code: format!("ADD A, R{}", register,),
+                    next: vec![address + 1],
+                }
+            }
+
             0x30 => {
                 let bit_addr = self.get_u8(address, 1) as u16;
                 let code_addr = self.get_u8(address, 2) as u16;
@@ -129,7 +139,7 @@ impl MCS51_Decompiler {
                 let new_address: u16 = if code_addr & 0x80 > 0 {
                     address.wrapping_sub((code_addr as i8 * -1) as u16) + 3
                 } else {
-                    address.wrapping_add(code_addr as u16) + 2
+                    address.wrapping_add(code_addr as u16) + 3
                 };
 
                 return MCS51_Decompiler_Instruction {
@@ -137,6 +147,23 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, bit_addr as u16, code_addr as u16],
                     code: format!("JNB #{:02x}, {:02x}", bit_addr, code_addr), //TODO Store as negative number
                     next: vec![address + 3, new_address],
+                };
+            }
+
+            0x50 => {
+                let code_addr = self.get_u8(address, 1) as u16;
+
+                let new_address: u16 = if code_addr & 0x80 > 0 {
+                    address.wrapping_sub((code_addr as i8 * -1) as u16) + 2
+                } else {
+                    address.wrapping_add(code_addr as u16) + 2
+                };
+
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16, code_addr],
+                    code: format!("JNC {:02x}", code_addr), //TODO Store as negative number
+                    next: vec![address + 2, new_address],
                 };
             }
 
@@ -202,8 +229,26 @@ impl MCS51_Decompiler {
                 }
             }
 
+            0x93 => {
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16],
+                    code: format!("MOVC A, @A + DPTR"),
+                    next: vec![address + 1],
+                }
+            }
+
+            0xA3 => {
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16],
+                    code: format!("INC DPTR"),
+                    next: vec![address + 1],
+                }
+            }
+
             0xB4 => {
-                let data = self.get_u8(address, 1);
+                let data = self.get_u8(address, 1) as u16;
                 let destu = self.get_u8(address, 2) as u16;
                 let offset = (destu & 0x7F) as u16;
                 let new_address: u16 = if destu & 0x80 > 0 {
@@ -214,26 +259,43 @@ impl MCS51_Decompiler {
 
                 return MCS51_Decompiler_Instruction {
                     address: address,
-                    instruction: vec![opcode as u16, destu as u16],
+                    instruction: vec![opcode as u16, data, destu as u16],
                     code: format!("CJNE A, #{:02x}, {:02x}", data, destu), //TODO Store as negative number
+                    next: vec![address + 3, new_address],
+                };
+            }
+
+            0xB5 => {
+                let data_addr = self.get_u8(address, 1) as u16;
+                let destu = self.get_u8(address, 2) as u16;
+                let offset = (destu & 0x7F) as u16;
+                let new_address: u16 = if destu & 0x80 > 0 {
+                    address.wrapping_sub((destu as i8 * -1) as u16) + 3
+                } else {
+                    address.wrapping_add(offset) + 2
+                };
+
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16, data_addr, destu],
+                    code: format!("CJNE A, {:02x}, {:02x}", data_addr, destu), //TODO Store as negative number
                     next: vec![address + 3, new_address],
                 };
             }
 
             0xB8..=0xBF => {
                 let register = opcode & 0x7;
-                let data = self.get_u8(address, 1);
+                let data = self.get_u8(address, 1) as u16;
                 let destu = self.get_u8(address, 2) as u16;
-                let offset = (destu & 0x7F) as u16;
                 let new_address: u16 = if destu & 0x80 > 0 {
                     address.wrapping_sub((destu as i8 * -1) as u16) + 3
                 } else {
-                    address.wrapping_add(offset) + 2
+                    address.wrapping_add(destu) + 2
                 };
 
                 return MCS51_Decompiler_Instruction {
                     address: address,
-                    instruction: vec![opcode as u16, destu as u16],
+                    instruction: vec![opcode as u16, data, destu],
                     code: format!("CJNE R{}, #{:02x}, {:02x}", register, data, destu), //TODO Store as negative number
                     next: vec![address + 3, new_address],
                 };
@@ -250,13 +312,12 @@ impl MCS51_Decompiler {
             }
 
             0xD8..=0xDF => {
-                let register = opcode & 0x7;;
+                let register = opcode & 0x7;
                 let destu = self.get_u8(address, 1) as u16;
-                let offset = (destu & 0x7F) as u16;
                 let new_address: u16 = if destu & 0x80 > 0 {
                     address.wrapping_sub((destu as i8 * -1) as u16) + 2
                 } else {
-                    address.wrapping_add(offset) + 2
+                    address.wrapping_add(destu) + 2
                 };
 
                 return MCS51_Decompiler_Instruction {
@@ -282,6 +343,16 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16],
                     code: format!("CLR A"),
                     next: vec![address + 1],
+                }
+            }
+
+            0xE5 => {
+                let dest = self.get_u8(address, 1) as u16;
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16, dest],
+                    code: format!("MOV A,{:02x}", dest),
+                    next: vec![address + 2],
                 }
             }
 
