@@ -3,6 +3,7 @@ use lib::mcus::mcs51::*;
 use lib::decompiler::mcs51::*;
 use lib::mcus::pic16f628a::*;
 use std::fs::File;
+use std::fs;
 use std::io::Read;
 use std::time::{Duration, Instant};
 
@@ -255,10 +256,18 @@ fn main() {
     let mut dec = MCS51_Decompiler::new();
     dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
 
+    /*
     let mut next: u16 = 0;
-    for _i in 0..255 {
+    let mut code = String::new();
+    for _i in 0..512 {
         let v = dec.get_instruction(next);
-        println!("{}", v);
+        code.push_str(format!("{}", v).as_str());
+        code.push('\n');
         next = v.next[0];
     }
+
+    fs::write("data/code.asm", code).expect("Unable to write file");
+    */
+
+    dec.decompile(0);
 }
