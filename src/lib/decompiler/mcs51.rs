@@ -41,14 +41,46 @@ impl MCS51_Decompiler {
         }
     }
 
-    pub fn write_to_file(&self) {
-        let mut code = String::new();
+    pub fn label_list(&self) -> BTreeMap<u16, bool> {
+        let mut labels: BTreeMap<u16, bool> = BTreeMap::new();
+
         for inst in &self.instructions {
-            code.push_str(format!("{}", inst.1).as_str());
+            if (inst.1).next.len() > 1 {
+                let addr = inst.1.next[1];
+                let t = inst.1.code.contains("CALL");
+
+                labels.insert(addr, t);
+            } else if inst.1.code.contains("LJMP") {
+                let addr = inst.1.next[0];
+                labels.insert(addr, false);
+            }
+        }
+
+        return labels;
+    }
+
+    pub fn write_to_file(&self, path: &str) {
+        let mut code = String::new();
+        let labels = self.label_list();
+
+        for inst in &self.instructions {
+            if labels.contains_key(inst.0) {
+                if labels[inst.0] {
+                    code.push_str(&format!("\n;----------------"));
+                    code.push_str(&format!("\n;FUNCTION"));
+                    code.push_str(&format!("\n;----------------"));
+                    code.push_str(&format!("\nFUN_{:04x}:\n", inst.0))
+                } else {
+                    code.push_str(&format!("\nLAB_{:04x}:\n", inst.0))
+                }  
+            }
+
+            code.push('\t');
+            code.push_str(&inst.1.code);
             code.push('\n');
         }
 
-        fs::write("data/code.asm", code).expect("Unable to write file");
+        fs::write(path, code).expect("Unable to write file");
     }
 
     pub fn decompile(&mut self, start: u16) {
@@ -103,19 +135,21 @@ impl MCS51_Decompiler {
     }
 
     pub fn bit_address_name(address: u8) -> String {
+        let bit_offset = address & 0x07;
         return match address {
-            0x80..=0x87 => format!("P0.{}", address - 0x80),
-            0x88..=0x8F => format!("TCON.{}", address - 0x88),
-            0x90..=0x97 => format!("P1.{}", address - 0x90),
-            0x98..=0x9F => format!("SCON.{}", address - 0x98),
-            0xA0..=0xA7 => format!("P2.{}", address - 0xA0),
-            0xA8..=0xAF => format!("IE.{}", address - 0xA8),
-            0xB0..=0xB7 => format!("P3.{}", address - 0xB0),
-            0xB8..=0xBF => format!("IP.{}", address - 0xB8),
-            0xC8..=0xCF => format!("T2CON.{}", address - 0xC8),
-            0xD0..=0xD7 => format!("PSW.{}", address - 0xD0),
-            0xE0..=0xE7 => format!("ACC.{}", address - 0xE0),
-            0xF0..=0xF7 => format!("B.{}", address - 0xF0),
+            0x00..=0x7F => format!("{:02x}.{}", address / 8, address & 0x07),
+            0x80..=0x87 => format!("P0.{}", bit_offset),
+            0x88..=0x8F => format!("TCON.{}",bit_offset),
+            0x90..=0x97 => format!("P1.{}", bit_offset),
+            0x98..=0x9F => format!("SCON.{}", bit_offset),
+            0xA0..=0xA7 => format!("P2.{}", bit_offset),
+            0xA8..=0xAF => format!("IE.{}", bit_offset),
+            0xB0..=0xB7 => format!("P3.{}", bit_offset),
+            0xB8..=0xBF => format!("IP.{}", bit_offset),
+            0xC8..=0xCF => format!("T2CON.{}", bit_offset),
+            0xD0..=0xD7 => format!("PSW.{}", bit_offset),
+            0xE0..=0xE7 => format!("ACC.{}", bit_offset),
+            0xF0..=0xF7 => format!("B.{}", bit_offset),
             _ => format!("{:02x}", address),
         }
     }
@@ -173,7 +207,7 @@ impl MCS51_Decompiler {
         return MCS51_Decompiler_Instruction {
             address: address,
             instruction: vec![opcode as u16, code_addr],
-            code: format!("{} {:02x}", label, code_addr), //TODO Store as negative number
+            code: format!("{} LAB_{:04x}", label, new_address),
             next: vec![address + 2, new_address],
         };
     }
@@ -202,7 +236,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, dest],
-                    code: format!("LJMP {:04x}", dest),
+                    code: format!("LJMP LAB_{:04x}", dest),
                     next: vec![dest],
                 }
             }
@@ -236,7 +270,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, bit_addr as u16, code_addr as u16],
-                    code: format!("JBC {}, {:02x}", dest_name, code_addr), //TODO Store as negative number
+                    code: format!("JBC {}, LAB_{:04x}", dest_name, new_address), //TODO Store as negative number
                     next: vec![address + 3, new_address],
                 };
             }
@@ -247,7 +281,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, dest],
-                    code: format!("LCALL {:04x}", dest),
+                    code: format!("LCALL FUN_{:04x}", dest),
                     next: vec![address + 3, dest],
                 }
             }
@@ -283,18 +317,13 @@ impl MCS51_Decompiler {
                 let bit_addr = self.get_u8(address, 1) as u16;
                 let code_addr = self.get_u8(address, 2) as u16;
 
-                let new_address: u16 = if code_addr & 0x80 > 0 {
-                    address.wrapping_sub((code_addr as i8 * -1) as u16) + 3
-                } else {
-                    address.wrapping_add(code_addr as u16) + 3
-                };
-
+                let new_address: u16 = MCS51_Decompiler::get_rel_address(address, code_addr, 3);
                 let dest_name = MCS51_Decompiler::bit_address_name(bit_addr as u8);
 
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, bit_addr as u16, code_addr as u16],
-                    code: format!("JB {}, {:02x}", dest_name, code_addr), //TODO Store as negative number
+                    code: format!("JB {}, LAB_{:04x}", dest_name, new_address), //TODO Store as negative number
                     next: vec![address + 3, new_address],
                 };
             }
@@ -328,18 +357,13 @@ impl MCS51_Decompiler {
                 let bit_addr = self.get_u8(address, 1) as u16;
                 let code_addr = self.get_u8(address, 2) as u16;
 
-                let new_address: u16 = if code_addr & 0x80 > 0 {
-                    address.wrapping_sub((code_addr as i8 * -1) as u16) + 3
-                } else {
-                    address.wrapping_add(code_addr as u16) + 3
-                };
-
+                let new_address: u16 = MCS51_Decompiler::get_rel_address(address, code_addr, 3);
                 let dest_name = MCS51_Decompiler::bit_address_name(bit_addr as u8);
 
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, bit_addr as u16, code_addr as u16],
-                    code: format!("JNB {}, {:02x}", dest_name, code_addr), //TODO Store as negative number
+                    code: format!("JNB {}, LAB_{:04x}", dest_name, new_address), //TODO Store as negative number
                     next: vec![address + 3, new_address],
                 };
             }
@@ -453,7 +477,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, data as u16],
-                    code: format!("SJMP {:02x}", data), //TODO Store as negative number
+                    code: format!("SJMP LAB_{:04x}", new_address),
                     next: vec![new_address],
                 };
             }
@@ -536,7 +560,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, data, destu as u16],
-                    code: format!("CJNE A, #{:02x}, {:02x}", data, destu), //TODO Store as negative number
+                    code: format!("CJNE A, #{:02x}, LAB_{:04x}", data, new_address),
                     next: vec![address + 3, new_address],
                 };
             }
@@ -549,7 +573,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, data_addr, destu],
-                    code: format!("CJNE A, {:02x}, {:02x}", data_addr, destu), //TODO Store as negative number
+                    code: format!("CJNE A, {:02x}, LAB_{:04x}", data_addr, new_address),
                     next: vec![address + 3, new_address],
                 };
             }
@@ -563,7 +587,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, data, destu],
-                    code: format!("CJNE R{}, #{:02x}, {:02x}", register, data, destu), //TODO Store as negative number
+                    code: format!("CJNE R{}, #{:02x}, LAB_{:04x}", register, data, new_address),
                     next: vec![address + 3, new_address],
                 };
             }
@@ -573,7 +597,14 @@ impl MCS51_Decompiler {
             }
 
             0xC2 => {
-                return self.two_byte_instruction(address, opcode, false, "CLR ", "");
+                let dest = self.get_u8(address, 1) as u16;
+                let dest_name = MCS51_Decompiler::bit_address_name(dest as u8);
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16, dest],
+                    code: format!("CLR {}", dest_name),
+                    next: vec![address + 2],
+                }
             }
 
             0xC3 => {
@@ -619,7 +650,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, data_addr as u16, destu as u16],
-                    code: format!("DJNZ {:02x}, {:02x}", data_addr, destu), //TODO Store as negative number
+                    code: format!("DJNZ {:02x}, LAB_{:04x}", data_addr, new_address),
                     next: vec![address + 3, new_address],
                 };
             }
@@ -632,7 +663,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, destu as u16],
-                    code: format!("DJNZ R{}, {:02x}", register, destu), //TODO Store as negative number
+                    code: format!("DJNZ R{}, LAB_{:04x}", register, new_address),
                     next: vec![address + 2, new_address],
                 };
             }

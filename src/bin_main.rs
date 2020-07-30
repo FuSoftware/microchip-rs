@@ -270,4 +270,5 @@ fn main() {
     */
 
     dec.decompile(0);
+    dec.write_to_file("data/code.asm");
 }
