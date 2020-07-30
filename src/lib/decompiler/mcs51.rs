@@ -1,3 +1,4 @@
+use std::fs;
 use std::fmt;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
@@ -38,6 +39,16 @@ impl MCS51_Decompiler {
             program: Vec::new(),
             instructions: BTreeMap::new()
         }
+    }
+
+    pub fn write_to_file(&self) {
+        let mut code = String::new();
+        for inst in &self.instructions {
+            code.push_str(format!("{}", inst.1).as_str());
+            code.push('\n');
+        }
+
+        fs::write("data/code.asm", code).expect("Unable to write file");
     }
 
     pub fn decompile(&mut self, start: u16) {
