@@ -262,7 +262,7 @@ FUN_02eb:
 	MOV 2f, DPH
 	MOV 30, DPL
 	CLR A
-	
+	JMP @A+DPTR
 
 ;----------------
 ;FUNCTION

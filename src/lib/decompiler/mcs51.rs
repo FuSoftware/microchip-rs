@@ -91,7 +91,7 @@ impl MCS51_Decompiler {
             let addr = next_addresses.pop_front().unwrap();
             if !self.instructions.contains_key(&addr) {
                 let v = self.get_instruction(addr); 
-                println!("{}", v);            
+                //println!("{}", v);            
                 for new_addr in &v.next {
                     next_addresses.push_front(*new_addr);
                 }
@@ -442,6 +442,15 @@ impl MCS51_Decompiler {
 
             0x74 => {
                 return self.two_byte_instruction(address, opcode, true, "MOV A, ", "");
+            }
+
+            0x73 => {
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16],
+                    code: format!("JMP @A+DPTR"),
+                    next: vec![],
+                }
             }
 
             0x75 => {
