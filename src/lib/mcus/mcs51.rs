@@ -1244,10 +1244,10 @@ impl MCS51 {
     }
 
     pub fn opcode_additional_work(&mut self, _label: &str, cycles: u8, pc: u16) {
-        if pc > 0 {
+        if pc != 0 {
             self.pc += pc
         };
-        if cycles > 0 {
+        if cycles != 0 {
             self.additional_cycles = cycles
         };
     }
@@ -1274,6 +1274,7 @@ impl MCS51 {
     pub fn op_subb(&mut self, dest_addr: MCS51_ADDRESSING, src_addr: MCS51_ADDRESSING) {
         let src = self.get_u8(src_addr).unwrap();
         let acc = self.get_u8(dest_addr).unwrap();
+        todo!();
     }
 
     pub fn op_mov_c_bit(&mut self, bit_addr: MCS51_ADDRESSING) {

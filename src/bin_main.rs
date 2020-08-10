@@ -232,14 +232,11 @@ fn test_emulator_mcs51() {
         let time_us_inst = time_us as f64 / iterations as f64;
         let time_ns_inst = time_ns as f64 / iterations as f64;
         println!(
-            "({:.3}us/inst) ({:.3}ns/inst) ({:.3} GHz) ({:.3} MHz)", 
-            time_us_inst,
+            "({:.3}ns/inst) ({:.3} GHz) ({:.3} MHz)", 
             time_ns_inst,
             1.0/time_ns_inst,
             1.0/time_us_inst
         );
-        
-        
     }
 }
 
@@ -253,6 +250,8 @@ fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
 }
 
 fn main() {
+    test_emulator_mcs51();
+    /*
     let mut dec = MCS51_Decompiler::new();
     dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
 
@@ -271,4 +270,5 @@ fn main() {
 
     dec.decompile(0);
     dec.write_to_file("data/code.asm");
+    */
 }
