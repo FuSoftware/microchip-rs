@@ -1,51 +1,3 @@
-pub enum MCS51_INST {
-    ACALL,
-    ADD,
-    ADDC,
-    AJMP,
-    AJNL,
-    CJNE,
-    CLR,
-    CPL,
-    DA,
-    DEC,
-    DIV,
-    DJNZ,
-    INC,
-    JB,
-    JBC,
-    JC,
-    JMP,
-    JNB,
-    JNC,
-    JNZ,
-    JZ,
-    LCALL,
-    LJMP,
-    MOV,
-    MOVC,
-    MOVX,
-    MUL,
-    NOP,
-    ORL,
-    POP,
-    PUSH,
-    RET,
-    RETI,
-    RL,
-    RLC,
-    RR,
-    RRC,
-    SETB,
-    SJMP,
-    SUBB,
-    SWAP,
-    XCH,
-    XCHD,
-    XRL,
-    UNDEFINED,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum MCS51_REGISTERS {
     P0 = 0,
@@ -92,38 +44,43 @@ pub enum MCS51_ADDRESSING {
 pub struct MCS51 {
     pc: u16,
     program: Vec<u8>,
-    pub user_registers: [u8; 8],
     pub special_function_registers: [u8; MCS51_REGISTERS::REGISTER_COUNT as usize],
     pub ram: [u8; 255],
-    pub stack: Vec<u8>,
     pub additional_cycles: u8,
-    pub instructions: [(&'static str, u8, u16, fn(&mut MCS51)); 255],
 }
 
 impl MCS51 {
     pub fn new() -> MCS51 {
         let mut mcs51 = MCS51 {
             pc: 0,
-            user_registers: [0; 8],
             ram: [0; 255],
             program: vec![],
-            stack: vec![],
             special_function_registers: [0; MCS51_REGISTERS::REGISTER_COUNT as usize],
             additional_cycles: 0,
-            instructions: [("NOT IMPLEMENTED", 0, 0, |_cpu| {}); 255],
         };
 
         mcs51
     }
 
     pub fn push_stack(&mut self, value: u8) {
-        self.stack.push(value);
+        let sp = self.get_stack_pointer();
+        self.write(sp, value);
         self.write_sfr_rel(MCS51_REGISTERS::SP, 1, false);
     }
 
     pub fn pop_stack(&mut self) -> u8 {
+        let sp = self.get_stack_pointer();
+        let val = *self.read(sp).unwrap();
         self.write_sfr_rel(MCS51_REGISTERS::SP, 1, true);
-        return self.stack.pop().unwrap();
+        return val;
+    }
+
+    pub fn set_stack_pointer(&mut self, value: u8) {
+        self.write_sfr(MCS51_REGISTERS::SP, value);
+    }
+
+    pub fn get_stack_pointer(&mut self) -> u8 {
+        return *self.read_sfr(MCS51_REGISTERS::SP).unwrap();
     }
 
     pub fn read_sfr(&self, register: MCS51_REGISTERS) -> Option<&u8> {
@@ -207,9 +164,7 @@ impl MCS51 {
 
     pub fn read(&self, address: u8) -> Option<&u8> {
         match address {
-            0x00..=0x1F => self.ram.get(address as usize),
-            0x20..=0x2F => self.read(0x80 + (0x08 * (address - 0x20))),
-            0x30..=0x7F => self.ram.get(address as usize),
+            0x00..=0x7F => self.ram.get(address as usize),
             0x80 => self
                 .special_function_registers
                 .get(MCS51_REGISTERS::P0 as usize),
@@ -392,7 +347,6 @@ impl MCS51 {
 
     pub fn reset(&mut self) {
         self.pc = 0;
-        self.user_registers = [0; 8];
         self.ram = [0; 255];
         self.additional_cycles = 0;
         self.reset_registers();
@@ -1434,17 +1388,19 @@ impl MCS51 {
     }
 
     pub fn op_ajmp(&mut self, addr11: MCS51_ADDRESSING) {
+        let offset = self.get_u11(addr11).unwrap();
         self.pc = self.pc + 2;
         self.pc &= 0xF800;
-        self.pc += self.get_u11(addr11).unwrap();
+        self.pc += offset;
     }
 
     pub fn op_acall(&mut self, addr11: MCS51_ADDRESSING) {
+        let offset = self.get_u11(addr11).unwrap();
         self.pc = self.pc + 2;
-        self.stack.push((self.pc & 0xFF) as u8);
-        self.stack.push(((self.pc >> 8) & 0xFF) as u8);
+        self.push_stack((self.pc & 0xFF) as u8);
+        self.push_stack(((self.pc >> 8) & 0xFF) as u8);
         self.pc &= 0xF800;
-        self.pc += self.get_u11(addr11).unwrap();
+        self.pc += offset;
     }
 
     pub fn op_add(&mut self, operand: MCS51_ADDRESSING) {
