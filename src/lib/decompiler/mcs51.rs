@@ -18,7 +18,7 @@ impl MCS51_Decompiler_Instruction {
             code: "".to_owned(),
             next: Vec::new(),
         }
-    }    
+    }
 }
 
 impl fmt::Display for MCS51_Decompiler_Instruction {
@@ -238,7 +238,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, dest],
                     code: format!("LJMP LAB_{:04x}", dest),
                     next: vec![dest],
-                }
+                };
             }
 
             0x05 => {
@@ -283,7 +283,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, dest],
                     code: format!("LCALL FUN_{:04x}", dest),
                     next: vec![address + 3, dest],
-                }
+                };
             }
 
             0x13 => {
@@ -464,7 +464,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, data1, data2],
                     code: format!("MOV {}, #{:02x}", address_label, data2),
                     next: vec![address + 3],
-                }
+                };
             }
 
             0x78..=0x7F => {
@@ -476,7 +476,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, data],
                     code: format!("MOV R{}, #{:02x}", register, data),
                     next: vec![address + 2],
-                }
+                };
             }
 
             0x80 => {
@@ -510,7 +510,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, data],
                     code: format!("MOV DPTR, #{:04x}", data),
                     next: vec![address + 3],
-                }
+                };
             }
 
             0x93 => {
@@ -613,7 +613,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, dest],
                     code: format!("CLR {}", dest_name),
                     next: vec![address + 2],
-                }
+                };
             }
 
             0xC3 => {
