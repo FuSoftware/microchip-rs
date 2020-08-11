@@ -1,7 +1,7 @@
-use std::fs;
-use std::fmt;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
+use std::fmt;
+use std::fs;
 
 pub struct MCS51_Decompiler_Instruction {
     address: u16,
@@ -23,7 +23,11 @@ impl MCS51_Decompiler_Instruction {
 
 impl fmt::Display for MCS51_Decompiler_Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:04x} : {} -> {:02x?}", self.address, self.code, self.next)
+        write!(
+            f,
+            "{:04x} : {} -> {:02x?}",
+            self.address, self.code, self.next
+        )
         //write!(f, "{}", self.code)
     }
 }
@@ -37,7 +41,7 @@ impl MCS51_Decompiler {
     pub fn new() -> MCS51_Decompiler {
         MCS51_Decompiler {
             program: Vec::new(),
-            instructions: BTreeMap::new()
+            instructions: BTreeMap::new(),
         }
     }
 
@@ -72,7 +76,7 @@ impl MCS51_Decompiler {
                     code.push_str(&format!("\nFUN_{:04x}:\n", inst.0))
                 } else {
                     code.push_str(&format!("\nLAB_{:04x}:\n", inst.0))
-                }  
+                }
             }
 
             code.push('\t');
@@ -90,8 +94,8 @@ impl MCS51_Decompiler {
         while !next_addresses.is_empty() {
             let addr = next_addresses.pop_front().unwrap();
             if !self.instructions.contains_key(&addr) {
-                let v = self.get_instruction(addr); 
-                //println!("{}", v);            
+                let v = self.get_instruction(addr);
+                //println!("{}", v);
                 for new_addr in &v.next {
                     next_addresses.push_front(*new_addr);
                 }
@@ -139,7 +143,7 @@ impl MCS51_Decompiler {
         return match address {
             0x00..=0x7F => format!("{:02x}.{}", address / 8, address & 0x07),
             0x80..=0x87 => format!("P0.{}", bit_offset),
-            0x88..=0x8F => format!("TCON.{}",bit_offset),
+            0x88..=0x8F => format!("TCON.{}", bit_offset),
             0x90..=0x97 => format!("P1.{}", bit_offset),
             0x98..=0x9F => format!("SCON.{}", bit_offset),
             0xA0..=0xA7 => format!("P2.{}", bit_offset),
@@ -151,7 +155,7 @@ impl MCS51_Decompiler {
             0xE0..=0xE7 => format!("ACC.{}", bit_offset),
             0xF0..=0xF7 => format!("B.{}", bit_offset),
             _ => format!("{:02x}", address),
-        }
+        };
     }
 
     pub fn get_u16(&self, address: u16, offset: u16) -> u16 {
@@ -169,7 +173,12 @@ impl MCS51_Decompiler {
         return self.program[address as usize];
     }
 
-    pub fn one_byte_instruction(&self, address: u16, opcode:u8, label: &str) -> MCS51_Decompiler_Instruction {
+    pub fn one_byte_instruction(
+        &self,
+        address: u16,
+        opcode: u8,
+        label: &str,
+    ) -> MCS51_Decompiler_Instruction {
         return MCS51_Decompiler_Instruction {
             address: address,
             instruction: vec![opcode as u16],
@@ -178,13 +187,25 @@ impl MCS51_Decompiler {
         };
     }
 
-    pub fn two_byte_instruction(&self, address: u16, opcode:u8, immediate: bool, prepend: &str, append: &str) -> MCS51_Decompiler_Instruction {
+    pub fn two_byte_instruction(
+        &self,
+        address: u16,
+        opcode: u8,
+        immediate: bool,
+        prepend: &str,
+        append: &str,
+    ) -> MCS51_Decompiler_Instruction {
         let val = self.get_u8(address, 1) as u16;
 
         let code = if immediate {
             format!("{}#{:02x}{}", prepend, val, append)
         } else {
-            format!("{}{}{}", prepend, MCS51_Decompiler::sfr_name(val as u8), append)
+            format!(
+                "{}{}{}",
+                prepend,
+                MCS51_Decompiler::sfr_name(val as u8),
+                append
+            )
         };
 
         return MCS51_Decompiler_Instruction {
@@ -192,10 +213,15 @@ impl MCS51_Decompiler {
             instruction: vec![opcode as u16, val],
             code: code,
             next: vec![address + 2],
-        }
+        };
     }
 
-    pub fn jump_instruction(&self, address: u16, opcode:u8, label: &str) -> MCS51_Decompiler_Instruction {
+    pub fn jump_instruction(
+        &self,
+        address: u16,
+        opcode: u8,
+        label: &str,
+    ) -> MCS51_Decompiler_Instruction {
         let code_addr = self.get_u8(address, 1) as u16;
 
         let new_address: u16 = if code_addr & 0x80 > 0 {
@@ -219,7 +245,7 @@ impl MCS51_Decompiler {
             address.wrapping_add(val_i8) + instruction_length
         };
 
-        return new_address
+        return new_address;
     }
 
     pub fn get_instruction(&mut self, address: u16) -> MCS51_Decompiler_Instruction {
@@ -249,15 +275,23 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, dest],
                     code: format!("INC {:02x}", dest),
                     next: vec![address + 2],
-                }
+                };
             }
 
             0x06..=0x07 => {
-                return self.one_byte_instruction(address, opcode, &format!("INC @R{}", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("INC @R{}", opcode & 0x1),
+                );
             }
 
             0x08..=0x0F => {
-                return self.one_byte_instruction(address, opcode, &format!("INC R{}", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("INC R{}", opcode & 0x7),
+                );
             }
 
             0x10 => {
@@ -302,15 +336,23 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, data],
                     code: format!("DEC {}", MCS51_Decompiler::sfr_name(data as u8)),
                     next: vec![address + 2],
-                }
+                };
             }
 
             0x16..=0x17 => {
-                return self.one_byte_instruction(address, opcode, &format!("DEC A, @R{}", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("DEC A, @R{}", opcode & 0x1),
+                );
             }
 
             0x18..=0x1F => {
-                return self.one_byte_instruction(address, opcode, &format!("DEC A, R{}", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("DEC A, R{}", opcode & 0x7),
+                );
             }
 
             0x20 => {
@@ -346,11 +388,19 @@ impl MCS51_Decompiler {
             }
 
             0x26..=0x27 => {
-                return self.one_byte_instruction(address, opcode, &format!("ADD A, @R{}", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("ADD A, @R{}", opcode & 0x1),
+                );
             }
 
             0x28..=0x2F => {
-                return self.one_byte_instruction(address, opcode, &format!("ADD A, R{}", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("ADD A, R{}", opcode & 0x7),
+                );
             }
 
             0x30 => {
@@ -397,11 +447,19 @@ impl MCS51_Decompiler {
             }
 
             0x46..=0x47 => {
-                return self.one_byte_instruction(address, opcode, &format!("ORL A, @R{}", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("ORL A, @R{}", opcode & 0x1),
+                );
             }
 
             0x48..=0x4F => {
-                return self.one_byte_instruction(address, opcode,&format!("ORL A, R{}", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("ORL A, R{}", opcode & 0x7),
+                );
             }
 
             0x50 => {
@@ -497,9 +555,13 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, dest, src],
-                    code: format!("MOV {}, {}", MCS51_Decompiler::sfr_name(dest as u8),  MCS51_Decompiler::sfr_name(src as u8)),
+                    code: format!(
+                        "MOV {}, {}",
+                        MCS51_Decompiler::sfr_name(dest as u8),
+                        MCS51_Decompiler::sfr_name(src as u8)
+                    ),
                     next: vec![address + 3],
-                }
+                };
             }
 
             0x90 => {
@@ -526,7 +588,11 @@ impl MCS51_Decompiler {
             }
 
             0x98..=0x9F => {
-                return self.one_byte_instruction(address, opcode, &format!("SUBB A, R{}", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("SUBB A, R{}", opcode & 0x7),
+                );
             }
 
             0xA3 => {
@@ -640,7 +706,7 @@ impl MCS51_Decompiler {
                     instruction: vec![opcode as u16, dest],
                     code: format!("SETB {}", dest_name),
                     next: vec![address + 2],
-                }
+                };
             }
 
             0xD3 => {
@@ -682,7 +748,11 @@ impl MCS51_Decompiler {
             }
 
             0xE2..=0xE3 => {
-                return self.one_byte_instruction(address, opcode, &format!("MOV A, @R{}", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("MOV A, @R{}", opcode & 0x1),
+                );
             }
 
             0xE4 => {
@@ -694,7 +764,11 @@ impl MCS51_Decompiler {
             }
 
             0xE8..=0xEF => {
-                return self.one_byte_instruction(address, opcode, &format!("MOV A, R{}", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("MOV A, R{}", opcode & 0x7),
+                );
             }
 
             0xF0 => {
@@ -702,7 +776,11 @@ impl MCS51_Decompiler {
             }
 
             0xF2..=0xF3 => {
-                return self.one_byte_instruction(address, opcode, &format!("MOVX @R{}, A", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("MOVX @R{}, A", opcode & 0x1),
+                );
             }
 
             0xF4 => {
@@ -714,14 +792,22 @@ impl MCS51_Decompiler {
             }
 
             0xF6..=0xF7 => {
-                return self.one_byte_instruction(address, opcode, &format!("MOV @R{}, A", opcode & 0x1));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("MOV @R{}, A", opcode & 0x1),
+                );
             }
 
             0xF8..=0xFF => {
-                return self.one_byte_instruction(address, opcode, &format!("MOV R{}, A", opcode & 0x7));
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("MOV R{}, A", opcode & 0x7),
+                );
             }
 
-            _ => println!("Undefined OPCODE {:02x} at address {:04x}", opcode, address)
+            _ => println!("Undefined OPCODE {:02x} at address {:04x}", opcode, address),
         }
 
         return MCS51_Decompiler_Instruction::new();

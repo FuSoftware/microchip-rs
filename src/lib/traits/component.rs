@@ -2,12 +2,12 @@
 pub enum PinDirection {
     INPUT,
     OUTPUT,
-    BOTH
+    BOTH,
 }
 
 pub struct Pin {
     direction: PinDirection,
-    value: bool
+    value: bool,
 }
 
 impl Pin {
@@ -20,7 +20,6 @@ impl Pin {
 
     pub fn set_value(&mut self, value: bool, direction: PinDirection) {
         if self.direction == PinDirection::BOTH {
-            
         } else {
             if self.direction == direction {
                 self.value = value;
@@ -35,6 +34,4 @@ impl Pin {
     }
 }
 
-trait Component {
-
-}
+trait Component {}

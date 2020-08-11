@@ -1,9 +1,9 @@
 mod lib;
-use lib::mcus::mcs51::*;
 use lib::decompiler::mcs51::*;
+use lib::mcus::mcs51::*;
 use lib::mcus::pic16f628a::*;
-use std::fs::File;
 use std::fs;
+use std::fs::File;
 use std::io::Read;
 use std::time::{Duration, Instant};
 
@@ -142,7 +142,7 @@ mod tests {
         mcu.set_program(vec![
             0x74, 0xC3, // Store 0xC3 in Accumulator
             0x79, 0xAA, // Store 0xAA in R1
-            0x29 //Add R1 to accumulator
+            0x29, //Add R1 to accumulator
         ]);
         mcu.next_instruction();
         mcu.next_instruction();
@@ -205,7 +205,7 @@ fn test_emulator_mcs51() {
         0x02, 0x00, 0x00 // Jump to beginning
     ]);
     */
-    
+
     mcu.set_program(vec![
         0x08, // Increment R1
         0x08, // Increment R1
@@ -217,10 +217,9 @@ fn test_emulator_mcs51() {
         0x08, // Increment R1
         0x08, // Increment R1
         0x08, // Increment R1
-        0x02, 0x00, 0x00 // Jump to beginning
+        0x02, 0x00, 0x00, // Jump to beginning
     ]);
-    
-    
+
     /*
     mcu.set_program(vec![
         0x00, // NOP
@@ -236,10 +235,8 @@ fn test_emulator_mcs51() {
         0x02, 0x00, 0x00 // Jump to beginning
     ]);
     */
-    
 
     for _j in 0..10 {
-        
         mcu.reset();
 
         let iterations = 1000000000;
@@ -247,17 +244,16 @@ fn test_emulator_mcs51() {
         for _i in 0..iterations {
             mcu.next_instruction();
         }
-        
-        
+
         let time_us = now.elapsed().as_micros();
         let time_ns = now.elapsed().as_nanos();
         let time_us_inst = time_us as f64 / iterations as f64;
         let time_ns_inst = time_ns as f64 / iterations as f64;
         println!(
-            "({:.3}ns/inst) ({:.3} GHz) ({:.3} MHz)", 
+            "({:.3}ns/inst) ({:.3} GHz) ({:.3} MHz)",
             time_ns_inst,
-            1.0/time_ns_inst,
-            1.0/time_us_inst
+            1.0 / time_ns_inst,
+            1.0 / time_us_inst
         );
     }
 }
@@ -272,7 +268,7 @@ fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
 }
 
 fn main() {
-    //test_emulator_mcs51();
+    test_emulator_mcs51();
     /*
     let mut dec = MCS51_Decompiler::new();
     dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
