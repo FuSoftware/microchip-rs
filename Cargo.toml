@@ -19,7 +19,9 @@ harness = false
 [lib]
 name = "microchip_rs"
 path = "src/lib_main.rs"
+bench = false
 
 [[bin]]
 name = "microchip_rs_bin"
 path = "src/bin_main.rs"
+bench = false

@@ -114,24 +114,28 @@ impl MCS51 {
     }
 
     pub fn get_current_register_bank(&self) -> u8 {
+        return self.get_current_register_bank_flags() >> 3;
+    }
+
+    pub fn get_current_register_bank_flags(&self) -> u8 {
         let psw = self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
-        let bank = *psw >> 3 & 0b11;
+        let bank = *psw & 0b11000;
         return bank;
     }
 
     pub fn get_register_mut(&mut self, register: u8) -> Option<&mut u8> {
-        let bank = self.get_current_register_bank();
-        return self.ram.get_mut(register as usize + 0x08 * bank as usize);
+        let bank = self.get_current_register_bank_flags();
+        return self.ram.get_mut(register as usize + bank as usize);
     }
 
     pub fn read_register(&self, register: u8) -> u8 {
-        let bank = self.get_current_register_bank();
-        return self.ram[register as usize + 0x08 * bank as usize];
+        let bank = self.get_current_register_bank_flags();
+        return self.ram[register as usize + bank as usize];
     }
 
     pub fn write_register(&mut self, register: u8, value: u8) {
-        let bank = self.get_current_register_bank();
-        self.ram[register as usize + 0x08 * bank as usize] = value;
+        let bank = self.get_current_register_bank_flags();
+        self.ram[register as usize + bank as usize] = value;
     }
 
     pub fn read_code_byte(&mut self, addr: usize) -> u8 {
@@ -568,13 +572,15 @@ impl MCS51 {
 
     pub fn next_instruction(&mut self) {
         let opcode = self.program[self.pc as usize];
-        /*
-        let operation = self.opcode_dispatch(opcode);
-        operation.3(self);
-        self.additional_cycles = operation.1;
-        self.pc = self.pc + 1 + operation.2;
-        */
+        self.opcode_dispatch_new(opcode);
+    }
 
+    pub fn next_instruction_debug(&mut self) {
+        if self.pc as usize >= self.program.len() {
+            self.pc = 0;
+        }
+
+        let opcode = self.program[self.pc as usize];
         self.opcode_dispatch_new(opcode);
     }
 
@@ -1417,9 +1423,245 @@ impl MCS51 {
                 self.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DIRECT(1));
                 self.opcode_additional_work("MOV", 1, 1)
             }
-            _ => {
-                self.op_nop();
-                self.opcode_additional_work("UNIMPLEMENTED", 0, 0)
+            0xB0 => {
+                
+            }
+            0xB1 => {
+                
+            }
+            0xB2 => {
+                
+            }
+            0xB3 => {
+                
+            }
+            0xB4 => {
+                
+            }
+            0xB5 => {
+                
+            }
+            0xB6 => {
+                
+            }
+            0xB7 => {
+                
+            }
+            0xB8 => {
+                
+            }
+            0xB9 => {
+                
+            }
+            0xBA => {
+                
+            }
+            0xBB => {
+                
+            }
+            0xBC => {
+                
+            }
+            0xBD => {
+                
+            }
+            0xBE => {
+                
+            }
+            0xBF => {
+                
+            }
+            0xC0 => {
+                
+            }
+            0xC1 => {
+                
+            }
+            0xC2 => {
+                
+            }
+            0xC3 => {
+                
+            }
+            0xC4 => {
+                
+            }
+            0xC5 => {
+                
+            }
+            0xC6 => {
+                
+            }
+            0xC7 => {
+                
+            }
+            0xC8 => {
+                
+            }
+            0xC9 => {
+                
+            }
+            0xCA => {
+                
+            }
+            0xCB => {
+                
+            }
+            0xCC => {
+                
+            }
+            0xCD => {
+                
+            }
+            0xCE => {
+                
+            }
+            0xCF => {
+                
+            }
+            0xD0 => {
+                
+            }
+            0xD1 => {
+                
+            }
+            0xD2 => {
+                
+            }
+            0xD3 => {
+                
+            }
+            0xD4 => {
+                
+            }
+            0xD5 => {
+                
+            }
+            0xD6 => {
+                
+            }
+            0xD7 => {
+                
+            }
+            0xD8 => {
+                
+            }
+            0xD9 => {
+                
+            }
+            0xDA => {
+                
+            }
+            0xDB => {
+                
+            }
+            0xDC => {
+                
+            }
+            0xDD => {
+                
+            }
+            0xDE => {
+                
+            }
+            0xDF => {
+                
+            }
+            0xE0 => {
+                
+            }
+            0xE1 => {
+                
+            }
+            0xE2 => {
+                
+            }
+            0xE3 => {
+                
+            }
+            0xE4 => {
+                
+            }
+            0xE5 => {
+                
+            }
+            0xE6 => {
+                
+            }
+            0xE7 => {
+                
+            }
+            0xE8 => {
+                
+            }
+            0xE9 => {
+                
+            }
+            0xEA => {
+                
+            }
+            0xEB => {
+                
+            }
+            0xEC => {
+                
+            }
+            0xED => {
+                
+            }
+            0xEE => {
+
+            }
+            0xEF => {
+                
+            }
+            0xF0 => {
+                
+            }
+            0xF1 => {
+                
+            }
+            0xF2 => {
+                
+            }
+            0xF3 => {
+                
+            }
+            0xF4 => {
+                
+            }
+            0xF5 => {
+                
+            }
+            0xF6 => {
+                
+            }
+            0xF7 => {
+                
+            }
+            0xF8 => {
+                
+            }
+            0xF9 => {
+                
+            }
+            0xFA => {
+                
+            }
+            0xFB=> {
+                
+            }
+            0xFC => {
+                
+            }
+            0xFD => {
+                
+            }
+            0xFE => {
+                
+            }
+            0xFF => {
+                
             }
         }
     }
