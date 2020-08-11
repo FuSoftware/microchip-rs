@@ -83,6 +83,10 @@ impl MCS51 {
         return *self.read_sfr(MCS51_REGISTERS::SP).unwrap();
     }
 
+    pub fn get_sfr_mut(&mut self, register: MCS51_REGISTERS) -> Option<&mut u8> {
+        return self.special_function_registers.get_mut(register as usize);
+    }
+
     pub fn read_sfr(&self, register: MCS51_REGISTERS) -> Option<&u8> {
         return self.special_function_registers.get(register as usize);
     }
@@ -113,6 +117,11 @@ impl MCS51 {
         let psw = self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
         let bank = *psw >> 3 & 0b11;
         return bank;
+    }
+
+    pub fn get_register_mut(&mut self, register: u8) -> Option<&mut u8> {
+        let bank = self.get_current_register_bank();
+        return self.ram.get_mut(register as usize + 0x08 * bank as usize);
     }
 
     pub fn read_register(&self, register: u8) -> u8 {
@@ -244,6 +253,91 @@ impl MCS51 {
                 .special_function_registers
                 [MCS51_REGISTERS::B as usize],
             _ => 0,
+        }
+    }
+
+    pub fn get_mut_addr(&mut self, address:u8) -> Option<&mut u8> {
+        match address {
+            0x00..=0x7F => self.ram.get_mut(address as usize),
+            0x80 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::P0 as usize),
+            0x81 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::SP as usize),
+            0x82 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::DPL as usize),
+            0x83 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::DPH as usize),
+            0x87 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::PCON as usize),
+            0x88 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TCON as usize),
+            0x89 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TMOD as usize),
+            0x8A => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TL0 as usize),
+            0x8B => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TL1 as usize),
+            0x8C => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TH0 as usize),
+            0x8D => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TH1 as usize),
+            0x90 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::P1 as usize),
+            0x98 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::SCON as usize),
+            0x99 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::SBUF as usize),
+            0xA0 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::P2 as usize),
+            0xA8 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::IE as usize),
+            0xB0 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::P3 as usize),
+            0xB8 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::IP as usize),
+            0xC8 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::T2CON as usize),
+            0xCA => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::RCAP2L as usize),
+            0xCB => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::RCAP2H as usize),
+            0xCC => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TL2 as usize),
+            0xCD => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::TH2 as usize),
+            0xD0 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::PSW as usize),
+            0xE0 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::ACC as usize),
+            0xF0 => self
+                .special_function_registers
+                .get_mut(MCS51_REGISTERS::B as usize),
+            _ => None,
         }
     }
 
@@ -502,29 +596,26 @@ impl MCS51 {
         }
     }
 
+    pub fn get_u8_mut(&mut self, addressing: MCS51_ADDRESSING) -> Option<&mut u8> {
+        match addressing {
+            MCS51_ADDRESSING::ACCUMULATOR => self.special_function_registers.get_mut(MCS51_REGISTERS::ACC as usize),
+            MCS51_ADDRESSING::REGISTER(reg) => self.get_register_mut(reg),
+            MCS51_ADDRESSING::DIRECT(offset) => self.get_mut_addr(self.program[self.pc as usize + offset as usize]),
+            MCS51_ADDRESSING::INDIRECT_Ri(reg) => self.get_mut_addr(self.read_register(reg)),
+            _ => {
+                println!("Unsupported addressing mode");
+                return None;
+            }
+        }
+    }
+
     pub fn get_u8(&self, addressing: MCS51_ADDRESSING) -> Option<u8> {
         match addressing {
             MCS51_ADDRESSING::ACCUMULATOR => Some(*self.read_sfr(MCS51_REGISTERS::ACC).unwrap()),
             MCS51_ADDRESSING::REGISTER(reg) => Some(self.read_register(reg)),
-            MCS51_ADDRESSING::DIRECT(offset) => Some(
-                *self
-                    .read(
-                        *self
-                            .program
-                            .get(self.pc as usize + offset as usize)
-                            .unwrap(),
-                    )
-                    .unwrap(),
-            ),
-            MCS51_ADDRESSING::INDIRECT_Ri(reg) => {
-                Some(*self.read(self.read_register(reg)).unwrap())
-            }
-            MCS51_ADDRESSING::DATA(offset) => Some(
-                *self
-                    .program
-                    .get(self.pc as usize + offset as usize)
-                    .unwrap(),
-            ),
+            MCS51_ADDRESSING::DIRECT(offset) => Some(*self.read(self.program[self.pc as usize + offset as usize]).unwrap(),),
+            MCS51_ADDRESSING::INDIRECT_Ri(reg) => Some(*self.read(self.read_register(reg)).unwrap()),
+            MCS51_ADDRESSING::DATA(offset) => Some(self.program[self.pc as usize + offset as usize],),
             _ => {
                 println!("Unsupported addressing mode");
                 return None;
@@ -1351,13 +1442,17 @@ impl MCS51 {
         let a = self.get_accumulator() as u16;
         let b = *self.read_sfr(MCS51_REGISTERS::B).unwrap() as u16;
 
-        let result = a * b;
-
-        self.write_sfr(MCS51_REGISTERS::B, (result >> 8) as u8);
-        self.set_accumulator((result & 0xFF) as u8);
-
+        if a == 0 || b == 0 {
+            self.write_sfr(MCS51_REGISTERS::B, 0);
+            self.set_accumulator(0);
+            self.set_overflow_flag(false);
+        } else {
+            let result = a * b;
+            self.write_sfr(MCS51_REGISTERS::B, (result >> 8) as u8);
+            self.set_accumulator((result & 0xFF) as u8);
+            self.set_overflow_flag(result > 0xFF);
+        }
         self.set_carry_flag(false);
-        self.set_overflow_flag(result > 0xFF);
     }
 
     /*
@@ -1550,14 +1645,14 @@ impl MCS51 {
 
     pub fn op_ajmp(&mut self, addr11: MCS51_ADDRESSING) {
         let offset = self.get_u11(addr11).unwrap();
-        self.pc = self.pc + 2;
+        self.pc += 2;
         self.pc &= 0xF800;
         self.pc += offset;
     }
 
     pub fn op_acall(&mut self, addr11: MCS51_ADDRESSING) {
         let offset = self.get_u11(addr11).unwrap();
-        self.pc = self.pc + 2;
+        self.pc += 2;
         self.push_stack((self.pc & 0xFF) as u8);
         self.push_stack(((self.pc >> 8) & 0xFF) as u8);
         self.pc &= 0xF800;
@@ -1671,8 +1766,8 @@ impl MCS51 {
 
     // Decrement
     pub fn op_dec(&mut self, operand: MCS51_ADDRESSING) {
-        let op = self.get_u8(operand).unwrap();
-        self.set_u8(operand, op.wrapping_sub(1));
+        let op = self.get_u8_mut(operand).unwrap();
+        *op = op.wrapping_sub(1);
     }
 
     pub fn op_dec_u16(&mut self, operand: MCS51_ADDRESSING) {
@@ -1693,8 +1788,8 @@ impl MCS51 {
 
     // Increment
     pub fn op_inc(&mut self, operand: MCS51_ADDRESSING) {
-        let op = self.get_u8(operand).unwrap();
-        self.set_u8(operand, op.wrapping_add(1));
+        let op = self.get_u8_mut(operand).unwrap();
+        *op = op.wrapping_add(1);
     }
 
     pub fn op_inc_u16(&mut self, operand: MCS51_ADDRESSING) {

@@ -190,7 +190,7 @@ pub fn test1() {
 fn test_emulator_mcs51() {
     let mut mcu = MCS51::new();
 
-    
+    /*
     mcu.set_program(vec![
         0x04, // Increment Accumulator
         0x04, // Increment Accumulator
@@ -200,6 +200,21 @@ fn test_emulator_mcs51() {
         0x09, // Increment Register 1
         0x74, 0xFE, // Store 0xFE in accumulator
         0x79, 0xFD, // Store 0xFD in R1
+        0x02, 0x00, 0x00 // Jump to beginning
+    ]);
+    */
+
+    mcu.set_program(vec![
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
+        0xA4, // MUL
         0x02, 0x00, 0x00 // Jump to beginning
     ]);
     
