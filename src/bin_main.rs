@@ -189,6 +189,7 @@ pub fn test1() {
 
 fn test_emulator_mcs51() {
     let mut mcu = MCS51::new();
+    mcu.generate_opcode_array();
 
     /*
     mcu.set_program(vec![
@@ -206,6 +207,7 @@ fn test_emulator_mcs51() {
     ]);
     */
 
+    /*
     mcu.set_program(vec![
         0x08, // Increment R1
         0x08, // Increment R1
@@ -219,8 +221,9 @@ fn test_emulator_mcs51() {
         0x08, // Increment R1
         0x02, 0x00, 0x00, // Jump to beginning
     ]);
+    */
 
-    /*
+    
     mcu.set_program(vec![
         0x00, // NOP
         0x00, // NOP
@@ -234,7 +237,7 @@ fn test_emulator_mcs51() {
         0x00, // NOP
         0x02, 0x00, 0x00 // Jump to beginning
     ]);
-    */
+    
 
     for _j in 0..10 {
         mcu.reset();
@@ -255,6 +258,7 @@ fn test_emulator_mcs51() {
             1.0 / time_ns_inst,
             1.0 / time_us_inst
         );
+        
     }
 }
 

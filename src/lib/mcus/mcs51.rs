@@ -64,8 +64,6 @@ impl MCS51 {
         mcs51
     }
 
-    fn empty() {}
-
     pub fn push_stack(&mut self, value: u8) {
         let sp = self.get_stack_pointer();
         self.write(sp, value);
@@ -550,10 +548,7 @@ impl MCS51 {
             MCS51_ADDRESSING::ACCUMULATOR => self.write_sfr(MCS51_REGISTERS::ACC, value),
             MCS51_ADDRESSING::REGISTER(reg) => self.write_register(reg, value),
             MCS51_ADDRESSING::DIRECT(offset) => self.write(
-                *self
-                    .program
-                    .get(self.pc as usize + offset as usize)
-                    .unwrap(),
+                self.program[self.pc as usize + offset as usize],
                 value,
             ),
             MCS51_ADDRESSING::INDIRECT_Ri(reg) => self.write(self.read_register(reg), value),
@@ -639,28 +634,15 @@ impl MCS51 {
         }
     }
 
-    pub fn get_u11(&self, addressing: MCS51_ADDRESSING) -> Option<u16> {
-        match addressing {
-            MCS51_ADDRESSING::ADDR_11 => {
-                let hi_byte = *self.program.get(self.pc as usize).unwrap() >> 3;
-                let lo_byte = *self.program.get(self.pc as usize + 1 as usize).unwrap();
-                let addr: u16 = (hi_byte as u16) << 8 + lo_byte as u16;
-                return Some(addr);
-            }
-            _ => {
-                println!("Unsupported addressing mode");
-                return None;
-            }
-        }
+    pub fn get_u11(&self) -> u16 {
+        let hi_byte = self.program[self.pc as usize] << 3;
+        let lo_byte = self.program[self.pc as usize + 1];
+        let addr: u16 = (hi_byte as u16) + lo_byte as u16;
+        return addr;
     }
 
     /*
      */
-
-    pub fn op_00(cpu: &mut MCS51) {
-        cpu.op_nop();
-        cpu.opcode_additional_work("NOP", 0, 0);
-    }
 
     pub fn generate_opcode_array(&mut self) {
         self.dispatch[0x00] = |cpu: &mut MCS51| {
@@ -668,7 +650,7 @@ impl MCS51 {
             cpu.opcode_additional_work("NOP", 0, 0);
         };
         self.dispatch[0x01] = |cpu: &mut MCS51| {
-            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_ajmp();
             cpu.opcode_additional_work("AJMP", 1, 0);
         };
         self.dispatch[0x02] = |cpu: &mut MCS51| {
@@ -732,7 +714,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JBC", 1, 0);
         };
         self.dispatch[0x11] = |cpu: &mut MCS51| {
-            cpu.op_acall(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_acall();
             cpu.opcode_additional_work("ACALL", 1, 0);
         };
         self.dispatch[0x12] = |cpu: &mut MCS51| {
@@ -796,7 +778,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JB", 1, 0);
         };
         self.dispatch[0x21] = |cpu: &mut MCS51| {
-            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_ajmp();
             cpu.opcode_additional_work("AJMP", 1, 0);
         };
         self.dispatch[0x22] = |cpu: &mut MCS51| {
@@ -860,7 +842,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JNB", 1, 0);
         };
         self.dispatch[0x31] = |cpu: &mut MCS51| {
-            cpu.op_acall(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_acall();
             cpu.opcode_additional_work("ACALL", 1, 0);
         };
         self.dispatch[0x32] = |cpu: &mut MCS51| {
@@ -924,7 +906,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JC", 1, 0);
         };
         self.dispatch[0x41] = |cpu: &mut MCS51| {
-            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_ajmp();
             cpu.opcode_additional_work("AJMP", 1, 0);
         };
         self.dispatch[0x42] = |cpu: &mut MCS51| {
@@ -994,7 +976,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JNC", 1, 0);
         };
         self.dispatch[0x51] = |cpu: &mut MCS51| {
-            cpu.op_acall(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_acall();
             cpu.opcode_additional_work("ACALL", 1, 0);
         };
         self.dispatch[0x52] = |cpu: &mut MCS51| {
@@ -1064,7 +1046,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JZ", 1, 0);
         };
         self.dispatch[0x61] = |cpu: &mut MCS51| {
-            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_ajmp();
             cpu.opcode_additional_work("AJMP", 1, 0);
         };
         self.dispatch[0x62] = |cpu: &mut MCS51| {
@@ -1134,7 +1116,7 @@ impl MCS51 {
             cpu.opcode_additional_work("JNZ", 1, 0);
         };
         self.dispatch[0x71] = |cpu: &mut MCS51| {
-            cpu.op_acall(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_acall();
             cpu.opcode_additional_work("ACALL", 1, 0);
         };
         self.dispatch[0x72] = |cpu: &mut MCS51| {
@@ -1198,7 +1180,7 @@ impl MCS51 {
             cpu.opcode_additional_work("SJMP", 1, 0);
         };
         self.dispatch[0x81] = |cpu: &mut MCS51| {
-            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_ajmp();
             cpu.opcode_additional_work("AJMP", 1, 0);
         };
         self.dispatch[0x82] = |cpu: &mut MCS51| {
@@ -1268,7 +1250,7 @@ impl MCS51 {
             cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x91] = |cpu: &mut MCS51| {
-            cpu.op_acall(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_acall();
             cpu.opcode_additional_work("ACALL", 1, 0);
         };
         self.dispatch[0x92] = |cpu: &mut MCS51| {
@@ -1332,7 +1314,7 @@ impl MCS51 {
             cpu.opcode_additional_work("ORLC", 1, 1);
         };
         self.dispatch[0xA1] = |cpu: &mut MCS51| {
-            cpu.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+            cpu.op_ajmp();
             cpu.opcode_additional_work("AJMP", 1, 1);
         };
         self.dispatch[0xA2] = |cpu: &mut MCS51| {
@@ -1489,7 +1471,7 @@ impl MCS51 {
                 self.opcode_additional_work("NOP", 0, 0);
             }
             0x01 => {
-                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.op_ajmp();
                 self.opcode_additional_work("AJMP", 1, 0);
             }
             0x02 => {
@@ -1553,7 +1535,7 @@ impl MCS51 {
                 self.opcode_additional_work("JBC", 1, 0);
             }
             0x11 => {
-                self.op_acall(MCS51_ADDRESSING::ADDR_11);
+                self.op_acall();
                 self.opcode_additional_work("ACALL", 1, 0);
             }
             0x12 => {
@@ -1617,7 +1599,7 @@ impl MCS51 {
                 self.opcode_additional_work("JB", 1, 0);
             }
             0x21 => {
-                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.op_ajmp();
                 self.opcode_additional_work("AJMP", 1, 0);
             }
             0x22 => {
@@ -1681,7 +1663,7 @@ impl MCS51 {
                 self.opcode_additional_work("JNB", 1, 0);
             }
             0x31 => {
-                self.op_acall(MCS51_ADDRESSING::ADDR_11);
+                self.op_acall();
                 self.opcode_additional_work("ACALL", 1, 0);
             }
             0x32 => {
@@ -1745,7 +1727,7 @@ impl MCS51 {
                 self.opcode_additional_work("JC", 1, 0);
             }
             0x41 => {
-                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.op_ajmp();
                 self.opcode_additional_work("AJMP", 1, 0);
             }
             0x42 => {
@@ -1815,7 +1797,7 @@ impl MCS51 {
                 self.opcode_additional_work("JNC", 1, 0);
             }
             0x51 => {
-                self.op_acall(MCS51_ADDRESSING::ADDR_11);
+                self.op_acall();
                 self.opcode_additional_work("ACALL", 1, 0);
             }
             0x52 => {
@@ -1885,7 +1867,7 @@ impl MCS51 {
                 self.opcode_additional_work("JZ", 1, 0);
             }
             0x61 => {
-                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.op_ajmp();
                 self.opcode_additional_work("AJMP", 1, 0);
             }
             0x62 => {
@@ -1955,7 +1937,7 @@ impl MCS51 {
                 self.opcode_additional_work("JNZ", 1, 0);
             }
             0x71 => {
-                self.op_acall(MCS51_ADDRESSING::ADDR_11);
+                self.op_acall();
                 self.opcode_additional_work("ACALL", 1, 0);
             }
             0x72 => {
@@ -2019,7 +2001,7 @@ impl MCS51 {
                 self.opcode_additional_work("SJMP", 1, 0);
             }
             0x81 => {
-                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.op_ajmp();
                 self.opcode_additional_work("AJMP", 1, 0);
             }
             0x82 => {
@@ -2089,7 +2071,7 @@ impl MCS51 {
                 self.opcode_additional_work("MOV", 1, 2);
             }
             0x91 => {
-                self.op_acall(MCS51_ADDRESSING::ADDR_11);
+                self.op_acall();
                 self.opcode_additional_work("ACALL", 1, 0);
             }
             0x92 => {
@@ -2153,7 +2135,7 @@ impl MCS51 {
                 self.opcode_additional_work("ORLC", 1, 1);
             }
             0xA1 => {
-                self.op_ajmp(MCS51_ADDRESSING::ADDR_11);
+                self.op_ajmp();
                 self.opcode_additional_work("AJMP", 1, 1);
             }
             0xA2 => {
@@ -2410,9 +2392,7 @@ impl MCS51 {
     pub fn op_jmp(&mut self) {
         let acc = self.get_accumulator() as u16;
         let dptr = self.get_dptr();
-        let new_pc = dptr.wrapping_add(acc);
-
-        self.pc = new_pc;
+        self.pc = dptr.wrapping_add(acc);
     }
 
     pub fn op_jnz(&mut self, code_addr: MCS51_ADDRESSING) {
@@ -2517,15 +2497,15 @@ impl MCS51 {
         self.set_u8(dest, src_dat);
     }
 
-    pub fn op_ajmp(&mut self, addr11: MCS51_ADDRESSING) {
-        let offset = self.get_u11(addr11).unwrap();
+    pub fn op_ajmp(&mut self) {
+        let offset = self.get_u11();
         self.pc += 2;
         self.pc &= 0xF800;
         self.pc += offset;
     }
 
-    pub fn op_acall(&mut self, addr11: MCS51_ADDRESSING) {
-        let offset = self.get_u11(addr11).unwrap();
+    pub fn op_acall(&mut self) {
+        let offset = self.get_u11();
         self.pc += 2;
         self.push_stack((self.pc & 0xFF) as u8);
         self.push_stack(((self.pc >> 8) & 0xFF) as u8);
@@ -2683,9 +2663,9 @@ impl MCS51 {
     }
 
     pub fn op_rr(&mut self) {
-        let acc = self.get_accumulator();
-        let underflow = acc & 1;
-        self.set_accumulator(acc >> 1 + (underflow * 0x80));
+        let mut acc = self.get_accumulator();
+        acc = acc.wrapping_shr(1);
+        self.set_accumulator(acc);
     }
 
     pub fn op_rrc(&mut self) {
@@ -2697,9 +2677,9 @@ impl MCS51 {
     }
 
     pub fn op_rl(&mut self) {
-        let acc = self.get_accumulator();
-        let overflow = acc & 0x80;
-        self.set_accumulator(acc << 1 + overflow);
+        let mut acc = self.get_accumulator();
+        acc = acc.wrapping_shl(1);
+        self.set_accumulator(acc);
     }
 
     pub fn op_rlc(&mut self) {
