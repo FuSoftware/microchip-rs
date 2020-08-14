@@ -183,6 +183,7 @@ pub struct PIC16F628A {
     opcode: u16,
     status: u8,
     additional_cycles: u8,
+    additional_pc: u8,
     program_memory: [u8; 0x7FF],
     stack: Vec<u16>,
     registers: [u8; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
@@ -204,6 +205,7 @@ impl PIC16F628A {
             opcode: 0,
             status: 0,
             additional_cycles: 0,
+            additional_pc: 0,
             program_memory: [0; 0x7FF],
             stack: Vec::new(),
             registers: [0; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
@@ -212,6 +214,38 @@ impl PIC16F628A {
             GPR2: [0; 80],
             GPR3: [0; 48],
         }
+    }
+
+    pub fn pc_offset(&mut self, offset: i8) {
+        let pc = self.pc_read();
+
+        if offset < 0 {
+            self.pc_write(pc.wrapping_sub(offset.abs() as u16));
+        } else {
+            self.pc_write(pc.wrapping_add(offset as u16));
+        }
+        
+    }
+
+    pub fn pc_write(&mut self, value: u16) {
+        self.write_register(PIC16F628A_REGISTERS::PCL, (value & 0xFF) as u8);
+        self.write_register(PIC16F628A_REGISTERS::PCLATH, (value >> 8) as u8);
+    }
+
+    pub fn write_register_bit(&mut self, register: PIC16F628A_REGISTERS, bit: u8, value: bool) {
+        let reg = self.get_register_mut(register).unwrap();
+
+        if value {
+            *reg |= 1 << bit;
+        } else {
+            *reg &= !(1 << bit);
+        }
+    }
+
+    pub fn pc_read(&self) -> u16 {
+        let l = self.read_register(PIC16F628A_REGISTERS::PCL) as u16;
+        let h = self.read_register(PIC16F628A_REGISTERS::PCLATH) as u16;
+        return l + (h << 8);
     }
 
     pub fn get_current_bank(&self) -> u8 {
@@ -269,6 +303,14 @@ impl PIC16F628A {
 
     pub fn get_register(&self, register: PIC16F628A_REGISTERS) -> Option<&u8> {
         self.registers.get(register as usize)
+    }
+
+    pub fn read_register(&self, register: PIC16F628A_REGISTERS) -> u8 {
+        self.registers[register as usize]
+    }
+
+    pub fn write_register(&mut self, register: PIC16F628A_REGISTERS, value: u8) {
+        self.registers[register as usize] = value;
     }
 
     pub fn get_flag(&self, register: PIC16F628A_REGISTERS, flag: u8) -> bool {
@@ -531,24 +573,26 @@ impl PIC16F628A {
                     0b00 => {
                         // Byte oriented
                         let code = opcode >> 8 & 0x0F;
+                        let f: u8 = (opcode & 0x7F) as u8;
+                        let d = ((opcode >> 7) & 1) > 0;
 
                         match code {
                             0 => self.op_movwf(),
-                            1 => self.op_clrf(),
-                            2 => self.op_subwf(),
-                            3 => self.op_decf(),
-                            4 => self.op_iorwf(),
-                            5 => self.op_andwf(),
+                            1 => self.op_clrf(f),
+                            2 => self.op_subwf(f, d),
+                            3 => self.op_decf(f, d),
+                            4 => self.op_iorwf(f, d),
+                            5 => self.op_andwf(f, d),
                             6 => self.op_xorwf(),
-                            7 => self.op_addwf(),
-                            8 => self.op_movf(),
-                            9 => self.op_comf(),
-                            10 => self.op_incf(),
-                            11 => self.op_decfsz(),
+                            7 => self.op_addwf(f, d),
+                            8 => self.op_movf(f, d),
+                            9 => self.op_comf(f, d),
+                            10 => self.op_incf(f, d),
+                            11 => self.op_decfsz(f, d),
                             12 => self.op_rrf(),
                             13 => self.op_rlf(),
                             14 => self.op_swapf(),
-                            15 => self.op_incfsz(),
+                            15 => self.op_incfsz(f, d),
                             _ => println!("Unused OPCODE {}", opcode),
                         }
                     }
@@ -556,6 +600,8 @@ impl PIC16F628A {
                     0b01 => {
                         // Bit oriented
                         let code = opcode >> 10 & 0b0011;
+                        let b: u8 = (opcode >> 7 & 0b11) as u8;
+                        let f: u8 = (opcode & 0x7F) as u8;
 
                         match code {
                             0 => self.op_bcf(),
@@ -592,55 +638,141 @@ impl PIC16F628A {
         }
     }
 
-    fn op_addwf(&mut self) {
-        self.k = (self.opcode & 0xFF) as u8;
-        self.w += self.k;
-        todo!();
+    fn op_addwf(&mut self, f: u8, d: bool) {
+        let data = self.read(f) as u16;
+        let acc = self.w as u16;
+        let res = acc + data;
+
+        self.set_digital_carry_flag((acc & 0xF + data & 0xF) > 0xF);
+        self.set_carry_flag(res & 0xFF00 != 0);
+        self.set_zero_flag(res == 0);
+
+        if d {
+            self.w = res as u8;
+        } else {
+            self.write(f, res as u8);
+        }
     }
 
-    fn op_andwf(&mut self) {
-        todo!();
+    fn op_andwf(&mut self, f: u8, d: bool) {
+        let res = self.w & self.read(f);
+
+        self.set_zero_flag(res == 0);
+
+        if d {
+            self.w = res as u8;
+        } else {
+            self.write(f, res as u8);
+        }
     }
 
-    fn op_clrf(&mut self) {
-        todo!();
+    fn op_clrf(&mut self, f: u8) {
+        self.write(f, 0);
+        self.set_carry_flag(true);
     }
 
     fn op_clrw(&mut self) {
-        todo!();
+        self.w = 0;
+        self.set_carry_flag(true);
     }
 
-    fn op_comf(&mut self) {
-        todo!();
+    fn op_comf(&mut self, f: u8, d: bool) {
+        let data = !self.read(f);
+
+        if d {
+            self.write(f, data);
+        } else {
+            self.w = data;
+        }
+        
     }
 
-    fn op_decf(&mut self) {
-        todo!();
+    fn op_decf(&mut self, f: u8, d: bool) {
+        let mut data = self.read(f);
+
+        data = data.wrapping_sub(1);
+        self.set_zero_flag(data == 0);
+
+        if d {
+            self.write(f, data);
+        } else {
+            self.w = data;
+        }
     }
 
-    fn op_decfsz(&mut self) {
-        todo!();
+    fn op_decfsz(&mut self, f: u8, d: bool) {
+        let mut data = self.read(f);
+
+        data = data.wrapping_sub(1);
+        
+        if data == 0 {
+            self.additional_pc += 1;
+            self.additional_cycles += 1;
+        }
+
+        if d {
+            self.write(f, data);
+        } else {
+            self.w = data;
+        }
     }
 
-    fn op_incf(&mut self) {
-        todo!();
+    fn op_incf(&mut self, f: u8, d: bool) {
+        let mut data = self.read(f);
+
+        data = data.wrapping_add(1);
+        self.set_zero_flag(data == 0);
+
+        if d {
+            self.write(f, data);
+        } else {
+            self.w = data;
+        }
     }
 
-    fn op_incfsz(&mut self) {
-        todo!();
+    fn op_incfsz(&mut self, f: u8, d: bool) {
+        let mut data = self.read(f);
+
+        data = data.wrapping_add(1);
+        
+        if data == 0 {
+            self.additional_pc += 1;
+            self.additional_cycles += 1;
+        }
+
+        if d {
+            self.write(f, data);
+        } else {
+            self.w = data;
+        }
     }
 
-    fn op_iorwf(&mut self) {
-        todo!();
+    fn op_iorwf(&mut self, f: u8, d: bool) {
+        let res = self.w | self.read(f);
+
+        self.set_zero_flag(res == 0);
+
+        if d {
+            self.w = res as u8;
+        } else {
+            self.write(f, res as u8);
+        }
     }
 
-    fn op_movf(&mut self) {
-        todo!();
+    fn op_movf(&mut self, f: u8, d: bool) {
+        let data = self.read(f);
+        self.set_zero_flag(data == 0);
+
+        if d {
+            self.write(f, data);
+        } else {
+            self.w = f;
+        }
     }
 
     // Move W to f
     fn op_movwf_new(&mut self, f: u8) {
-        self.set_memory_address(f, self.w);
+        self.write(f, self.w);
     }
 
     fn op_movwf(&mut self) {
@@ -655,23 +787,15 @@ impl PIC16F628A {
 
     // Rotate Left f through Carry
     fn op_rlf_new(&mut self, f: u8, d: bool) {
-        let new_data: u8;
-        let new_carry: bool;
+        let mut data = self.read(f) as u16;
+        data = (data << 1) + self.get_carry_flag() as u16;
 
-        if let Some(reg) = self.get_memory_address(f) {
-            new_carry = *reg & 0x80 > 0;
-            new_data = (*reg << 1) + self.get_carry_flag() as u8;
-        } else {
-            println!("Invalid register while processing RRF {}", f);
-            return;
-        }
-
-        self.set_carry_flag(new_carry);
+        self.set_carry_flag(data > 0xFF);
 
         if d {
-            self.set_memory_address(f, new_data);
+            self.write(f, data as u8);
         } else {
-            self.w = new_data;
+            self.w = data as u8;
         }
     }
 
@@ -684,23 +808,16 @@ impl PIC16F628A {
 
     // Rotate Right f through Carry
     fn op_rrf_new(&mut self, f: u8, d: bool) {
-        let new_data: u8;
-        let new_carry: bool;
-
-        if let Some(reg) = self.get_memory_address(f) {
-            new_data = (*reg >> 1) + self.get_carry_flag() as u8 * 0x80;
-            new_carry = *reg & 0x01 > 0;
-        } else {
-            println!("Invalid register while processing RRF {}", f);
-            return;
-        }
+        let mut data = self.read(f) as u16;
+        let new_carry = (data & 1) > 0;
+        data = data >> 1 + ((self.get_carry_flag() as u16) << 7);
 
         self.set_carry_flag(new_carry);
 
         if d {
-            self.set_memory_address(f, new_data);
+            self.write(f, data as u8);
         } else {
-            self.w = new_data;
+            self.w = data as u8;
         }
     }
 
@@ -711,36 +828,73 @@ impl PIC16F628A {
         self.op_rrf_new(self.f, self.d);
     }
 
-    fn op_subwf(&mut self) {
-        todo!();
+    fn op_subwf(&mut self, f: u8, d: bool) {
+        let data = self.read(f) as i8;
+        let acc = self.w as i8;
+
+        let new_data = data.wrapping_sub(acc);
+
+        self.set_zero_flag(new_data == 0);
+        self.set_carry_flag(new_data >= 0);
+        // TODO Set DC Flag
+
+        if d {
+            self.write(f, new_data as u8);
+        } else {
+            self.w = new_data as u8;
+        }
     }
 
-    fn op_swapf(&mut self) {
-        todo!();
+    fn op_swapf(&mut self, f: u8, d: bool) {
+        let data = self.read(f);
+        let new_data = (data << 4) + (data >> 4);
+
+        if d {
+            self.write(f, new_data as u8);
+        } else {
+            self.w = new_data as u8;
+        }
     }
 
-    fn op_xorwf(&mut self) {
-        todo!();
+    fn op_xorwf(&mut self, f: u8, d: bool) {
+        let data = self.read(f);
+        let new_data = data ^ self.w;
+
+        if d {
+            self.write(f, new_data as u8);
+        } else {
+            self.w = new_data as u8;
+        }
     }
 
     // Bit operations
 
-    fn op_bcf(&mut self) {
-        todo!();
+    fn op_bcf(&mut self, f: u8, b: u8) {
+        let data = self.read(f);
+        let new_data = data & !(1 << b);
+        self.write(f, data);
     }
 
-    fn op_bsf(&mut self) {
-        self.f = (self.opcode & 0x7F) as u8;
-        self.b = ((self.opcode >> 7) & 0b11) as u8;
-        todo!();
+    fn op_bsf(&mut self, f: u8, b: u8) {
+        let data = self.read(f);
+        let new_data = data | (1 << b);
+        self.write(f, data);
     }
 
-    fn op_btfsc(&mut self) {
-        todo!();
+    fn op_btfsc(&mut self, f: u8, b: u8) {
+        let data = self.read(f);
+
+        if (data & (1 << b)) == 0 {
+            self.additional_pc += 1;
+        }
     }
 
-    fn op_btfss(&mut self) {
-        todo!();
+    fn op_btfss(&mut self, f: u8, b: u8) {
+        let data = self.read(f);
+
+        if (data & (1 << b)) > 0 {
+            self.additional_pc += 1;
+        }
     }
 
     // --------
@@ -748,29 +902,38 @@ impl PIC16F628A {
     // --------
 
     // Add literal to W
-    fn op_addlw(&mut self) {
-        self.k = (self.opcode & 0xFF) as u8;
-        self.w += self.k;
+    fn op_addlw(&mut self, k: u8) {
+        let result = self.w as u16 + k as u16;
+
+        self.set_carry_flag(result > 0xFF);
+        self.set_zero_flag((result & 0xFF) == 0);
+        //TODO Set DC flag
+
+        self.w = result as u8;
     }
 
     // AND literal with W
-    fn op_andlw(&mut self) {
-        todo!();
+    fn op_andlw(&mut self, k: u8) {
+        let result = self.w & k;
+        self.set_zero_flag(result == 0);
+        self.w = result;
     }
 
     // Call subroutine
-    fn op_call(&mut self) {
+    fn op_call(&mut self, k: u16) {
         todo!();
     }
 
     // Clear watchdog timer
     fn op_clrwdt(&mut self) {
-        todo!();
+        self.write_register_bit(PIC16F628A_REGISTERS::STATUS, 3, true); //PD
+        self.write_register_bit(PIC16F628A_REGISTERS::STATUS, 4, true); //T0
+        // TODO Set Watchdog prescaler
     }
 
     // Go to address
-    fn op_goto(&mut self) {
-        todo!();
+    fn op_goto(&mut self, k: u16) {
+        self.pc_write(k);
     }
 
     // Inclusive OR literal with W
