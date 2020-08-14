@@ -239,6 +239,7 @@ fn test_emulator_mcs51() {
     ]);
     
 
+    
     for _j in 0..10 {
         mcu.reset();
 
@@ -258,8 +259,14 @@ fn test_emulator_mcs51() {
             1.0 / time_ns_inst,
             1.0 / time_us_inst
         );
-        
     }
+    
+    /*
+    for _i in 0..20 {
+        mcu.next_instruction();
+        println!("{}",mcu.pc);
+    }
+    */
 }
 
 fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
@@ -272,7 +279,10 @@ fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
 }
 
 fn main() {
-    test_emulator_mcs51();
+    let a: u8 = 128;
+    println!("{}", a as i8);
+
+    //test_emulator_mcs51();
     /*
     let mut dec = MCS51_Decompiler::new();
     dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
