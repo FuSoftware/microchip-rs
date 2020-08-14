@@ -169,7 +169,7 @@ pub fn test1() {
         mcu.get_carry_flag()
     );
     let mut now = Instant::now();
-    mcu.run_opcode_old(opcode);
+    mcu.run_opcode(opcode);
 
     println!("{}", now.elapsed().as_nanos());
     println!(
@@ -185,6 +185,97 @@ pub fn test1() {
         mcu.get_memory_address(0x7E).unwrap(),
         mcu.get_carry_flag()
     );
+}
+
+fn test_emulator_16f628a() {
+    let mut mcu = PIC16F628A::new();
+
+    /*
+    mcu.set_program(vec![
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0b10_1000_00000000 // GOTO 0
+    ]);
+    */
+    //0b100000000
+    
+    /*
+    mcu.set_program(vec![
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b00_1010_1_1110000, // Increment address 70h and store back in f
+        0b10_1000_00000000 // GOTO 0
+    ]);
+    */
+
+    /*
+    mcu.set_program(vec![
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b00_0001_0_0000000, // Clear W
+        0b10_1000_00000000 // GOTO 0
+    ]);
+    */
+
+    mcu.set_program(vec![
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b00_0001_1_1110000, // Clear f at 70h
+        0b10_1000_00000000 // GOTO 0
+    ]);
+    
+
+    for _j in 0..10 {
+        mcu.reset();
+
+        let iterations = 1000000000;
+        let now = Instant::now();
+        for _i in 0..iterations {
+            mcu.next_instruction();
+        }
+
+        let time_us = now.elapsed().as_micros();
+        let time_ns = now.elapsed().as_nanos();
+        let time_us_inst = time_us as f64 / iterations as f64;
+        let time_ns_inst = time_ns as f64 / iterations as f64;
+        println!(
+            "({:.3}ns/inst) ({:.3} GHz) ({:.3} MHz)",
+            time_ns_inst,
+            1.0 / time_ns_inst,
+            1.0 / time_us_inst
+        );
+        
+    }
+    
 }
 
 fn test_emulator_mcs51() {
@@ -274,16 +365,10 @@ fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
     let metadata = std::fs::metadata(filename).expect("unable to read metadata");
     let mut buffer = vec![0; metadata.len() as usize];
     f.read(&mut buffer).expect("buffer overflow");
-
     buffer
 }
 
-fn main() {
-    let a: u8 = 128;
-    println!("{}", a as i8);
-
-    //test_emulator_mcs51();
-    /*
+fn test_decompile_mcs51() {
     let mut dec = MCS51_Decompiler::new();
     dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
 
@@ -302,5 +387,8 @@ fn main() {
 
     dec.decompile(0);
     dec.write_to_file("data/code.asm");
-    */
+}
+
+fn main() {
+    test_emulator_16f628a();
 }

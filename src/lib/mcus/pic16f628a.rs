@@ -174,45 +174,49 @@ pub enum PIC16F628A_REGISTERS {
 }
 
 pub struct PIC16F628A {
-    f: u8,
-    d: bool,
-    b: u8,
-    k: u8,
     w: u8,
     k_addr: u16,
     opcode: u16,
     status: u8,
     additional_cycles: u8,
     additional_pc: u8,
-    program_memory: [u8; 0x7FF],
+    program_memory: Vec<u16>,
     stack: Vec<u16>,
     registers: [u8; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
     common_memory: [u8; 16],
-    GPR1: [u8; 80],
-    GPR2: [u8; 80],
-    GPR3: [u8; 48],
+    gpr1: [u8; 80],
+    gpr2: [u8; 80],
+    gpr3: [u8; 48],
 }
 
 impl PIC16F628A {
     pub fn new() -> PIC16F628A {
         PIC16F628A {
-            f: 0,
-            d: false,
-            b: 0,
-            k: 0,
             w: 0,
             k_addr: 0,
             opcode: 0,
             status: 0,
             additional_cycles: 0,
             additional_pc: 0,
-            program_memory: [0; 0x7FF],
+            program_memory: Vec::new(),
             stack: Vec::new(),
             registers: [0; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
             common_memory: [0; 16],
-            GPR1: [0; 80],
-            GPR2: [0; 80],
-            GPR3: [0; 48],
+            gpr1: [0; 80],
+            gpr2: [0; 80],
+            gpr3: [0; 48],
+        }
+    }
+
+    pub fn increment_pc(&mut self) {
+        let pcl = self.get_register_mut(PIC16F628A_REGISTERS::PCL).unwrap();
+
+        if *pcl == 0xFF {
+            *pcl = 0;
+            let pch = self.get_register_mut(PIC16F628A_REGISTERS::PCLATH).unwrap();
+            *pch = (*pch + 1) & 0x1F;
+        } else {
+            *pcl += 1;
         }
     }
 
@@ -229,7 +233,7 @@ impl PIC16F628A {
 
     pub fn pc_write(&mut self, value: u16) {
         self.write_register(PIC16F628A_REGISTERS::PCL, (value & 0xFF) as u8);
-        self.write_register(PIC16F628A_REGISTERS::PCLATH, (value >> 8) as u8);
+        self.write_register(PIC16F628A_REGISTERS::PCLATH, ((value >> 8) & 0x1F) as u8);
     }
 
     pub fn write_register_bit(&mut self, register: PIC16F628A_REGISTERS, bit: u8, value: bool) {
@@ -257,6 +261,10 @@ impl PIC16F628A {
         let status = self.get_register_mut(PIC16F628A_REGISTERS::STATUS).unwrap();
         *status &= 0b10011111;
         *status |= (bank & 0b11) << 5;
+    }
+
+    pub fn set_program(&mut self, program: Vec<u16>) {
+        self.program_memory = program;
     }
 
     pub fn reset(&mut self) {
@@ -314,8 +322,7 @@ impl PIC16F628A {
     }
 
     pub fn get_flag(&self, register: PIC16F628A_REGISTERS, flag: u8) -> bool {
-        let reg = self.get_register(register).unwrap();
-        return (*reg & flag) > 0;
+        return (self.read_register(register) & flag) > 0;
     }
 
     pub fn set_flag(&mut self, register: PIC16F628A_REGISTERS, flag: u8, value: bool) {
@@ -359,10 +366,9 @@ impl PIC16F628A {
 
     pub fn get_memory_address(&self, address: u8) -> Option<&u8> {
         let bank = self.get_current_bank();
-        let fixed_address = address & 0x7F;
 
         match bank {
-            0 => match fixed_address {
+            0 => match address {
                 0x01 => self.get_register(PIC16F628A_REGISTERS::TMR0),
                 0x02 => self.get_register(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register(PIC16F628A_REGISTERS::STATUS),
@@ -384,12 +390,12 @@ impl PIC16F628A {
                 0x19 => self.get_register(PIC16F628A_REGISTERS::TXREG),
                 0x1A => self.get_register(PIC16F628A_REGISTERS::RCREG),
                 0x1F => self.get_register(PIC16F628A_REGISTERS::CMCON),
-                0x20..=0x6F => self.GPR1.get((fixed_address - 0x20) as usize),
-                0x70..=0x7F => self.common_memory.get((fixed_address - 0x70) as usize),
+                0x20..=0x6F => self.gpr1.get((address & 0xDF) as usize),
+                0x70..=0x7F => self.common_memory.get((address & 0xF) as usize),
                 _ => None,
             },
 
-            1 => match fixed_address {
+            1 => match address {
                 0x01 => self.get_register(PIC16F628A_REGISTERS::OPTION),
                 0x02 => self.get_register(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register(PIC16F628A_REGISTERS::STATUS),
@@ -408,12 +414,12 @@ impl PIC16F628A {
                 0x1C => self.get_register(PIC16F628A_REGISTERS::EECON1),
                 0x1D => self.get_register(PIC16F628A_REGISTERS::EECON2),
                 0x1F => self.get_register(PIC16F628A_REGISTERS::VRCON),
-                0x20..=0x6F => self.GPR2.get((fixed_address - 0x20) as usize),
-                0x70..=0x7F => self.common_memory.get((fixed_address - 0x70) as usize),
+                0x20..=0x6F => self.gpr2.get((address & 0xDF) as usize),
+                0x70..=0x7F => self.common_memory.get((address & 0xF) as usize),
                 _ => None,
             },
 
-            2 => match fixed_address {
+            2 => match address {
                 0x01 => self.get_register(PIC16F628A_REGISTERS::TMR0),
                 0x02 => self.get_register(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register(PIC16F628A_REGISTERS::STATUS),
@@ -421,12 +427,12 @@ impl PIC16F628A {
                 0x06 => self.get_register(PIC16F628A_REGISTERS::PORTB),
                 0x0A => self.get_register(PIC16F628A_REGISTERS::PCLATH),
                 0x0B => self.get_register(PIC16F628A_REGISTERS::INTCON),
-                0x20..=0x4F => self.GPR3.get((fixed_address - 0x20) as usize),
-                0x70..=0x7F => self.common_memory.get((fixed_address - 0x70) as usize),
+                0x20..=0x4F => self.gpr3.get((address & 0xDF) as usize),
+                0x70..=0x7F => self.common_memory.get((address & 0xF) as usize),
                 _ => None,
             },
 
-            3 => match fixed_address {
+            3 => match address {
                 0x01 => self.get_register(PIC16F628A_REGISTERS::OPTION),
                 0x02 => self.get_register(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register(PIC16F628A_REGISTERS::STATUS),
@@ -434,22 +440,19 @@ impl PIC16F628A {
                 0x06 => self.get_register(PIC16F628A_REGISTERS::TRISB),
                 0x0A => self.get_register(PIC16F628A_REGISTERS::PCLATH),
                 0x0B => self.get_register(PIC16F628A_REGISTERS::INTCON),
-                0x70..=0x7F => self.common_memory.get((fixed_address - 0x70) as usize),
+                0x70..=0x7F => self.common_memory.get((address & 0xF) as usize),
                 _ => None,
             },
 
-            _ => {
-                return None;
-            }
+            _ => None
         }
     }
 
     pub fn get_memory_address_mut(&mut self, address: u8) -> Option<&mut u8> {
         let bank = self.get_current_bank();
-        let fixed_address = address & 0x7F;
 
         match bank {
-            0 => match fixed_address {
+            0 => match address {
                 0x01 => self.get_register_mut(PIC16F628A_REGISTERS::TMR0),
                 0x02 => self.get_register_mut(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register_mut(PIC16F628A_REGISTERS::STATUS),
@@ -471,12 +474,12 @@ impl PIC16F628A {
                 0x19 => self.get_register_mut(PIC16F628A_REGISTERS::TXREG),
                 0x1A => self.get_register_mut(PIC16F628A_REGISTERS::RCREG),
                 0x1F => self.get_register_mut(PIC16F628A_REGISTERS::CMCON),
-                0x20..=0x6F => self.GPR1.get_mut((fixed_address - 0x20) as usize),
-                0x70..=0x7F => self.common_memory.get_mut((fixed_address - 0x70) as usize),
+                0x20..=0x6F => self.gpr1.get_mut((address & 0xDF) as usize),
+                0x70..=0x7F => self.common_memory.get_mut((address & 0xF) as usize),
                 _ => None,
             },
 
-            1 => match fixed_address {
+            1 => match address {
                 0x01 => self.get_register_mut(PIC16F628A_REGISTERS::OPTION),
                 0x02 => self.get_register_mut(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register_mut(PIC16F628A_REGISTERS::STATUS),
@@ -495,12 +498,12 @@ impl PIC16F628A {
                 0x1C => self.get_register_mut(PIC16F628A_REGISTERS::EECON1),
                 0x1D => self.get_register_mut(PIC16F628A_REGISTERS::EECON2),
                 0x1F => self.get_register_mut(PIC16F628A_REGISTERS::VRCON),
-                0x20..=0x6F => self.GPR2.get_mut((fixed_address - 0x20) as usize),
-                0x70..=0x7F => self.common_memory.get_mut((fixed_address - 0x70) as usize),
+                0x20..=0x6F => self.gpr2.get_mut((address & 0xDF) as usize),
+                0x70..=0x7F => self.common_memory.get_mut((address & 0xF) as usize),
                 _ => None,
             },
 
-            2 => match fixed_address {
+            2 => match address {
                 0x01 => self.get_register_mut(PIC16F628A_REGISTERS::TMR0),
                 0x02 => self.get_register_mut(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register_mut(PIC16F628A_REGISTERS::STATUS),
@@ -508,12 +511,12 @@ impl PIC16F628A {
                 0x06 => self.get_register_mut(PIC16F628A_REGISTERS::PORTB),
                 0x0A => self.get_register_mut(PIC16F628A_REGISTERS::PCLATH),
                 0x0B => self.get_register_mut(PIC16F628A_REGISTERS::INTCON),
-                0x20..=0x4F => self.GPR3.get_mut((fixed_address - 0x20) as usize),
-                0x70..=0x7F => self.common_memory.get_mut((fixed_address - 0x70) as usize),
+                0x20..=0x4F => self.gpr3.get_mut((address & 0xDF) as usize),
+                0x70..=0x7F => self.common_memory.get_mut((address & 0xF) as usize),
                 _ => None,
             },
 
-            3 => match fixed_address {
+            3 => match address {
                 0x01 => self.get_register_mut(PIC16F628A_REGISTERS::OPTION),
                 0x02 => self.get_register_mut(PIC16F628A_REGISTERS::PCL),
                 0x03 => self.get_register_mut(PIC16F628A_REGISTERS::STATUS),
@@ -521,45 +524,31 @@ impl PIC16F628A {
                 0x06 => self.get_register_mut(PIC16F628A_REGISTERS::TRISB),
                 0x0A => self.get_register_mut(PIC16F628A_REGISTERS::PCLATH),
                 0x0B => self.get_register_mut(PIC16F628A_REGISTERS::INTCON),
-                0x70..=0x7F => self.common_memory.get_mut((fixed_address - 0x70) as usize),
+                0x70..=0x7F => self.common_memory.get_mut((address & 0xF) as usize),
                 _ => None,
             },
 
             _ => {
-                return None;
+                None
             }
         }
     }
 
     pub fn write(&mut self, address: u8, data: u8) {
-        todo!();
+        let a = self.get_memory_address_mut(address).unwrap();
+        *a = data;
     }
 
-    pub fn read(&mut self, address: u8) -> u8 {
-        todo!();
+    pub fn read(&self, address: u8) -> u8 {
+        return *self.get_memory_address(address).unwrap();
     }
 
-    pub fn read_bank_address(&mut self, address: (u8, u8)) -> u8 {
-        todo!();
-    }
-
-    pub fn write_bank_address(&mut self, address: (u8, u8), data: u8) {
-        todo!();
+    pub fn next_instruction(&mut self) {
+        let opcode = self.program_memory[self.pc_read() as usize];
+        self.run_opcode(opcode);
     }
 
     pub fn run_opcode(&mut self, opcode: u16) {
-        self.opcode = opcode;
-        let instruction = PIC16F628A_INSTRUCTION::parse(opcode);
-
-        match instruction {
-            PIC16F628A_INSTRUCTION::RRF { f, d } => self.op_rrf_new(f, d),
-            _ => println!("Unimplemented"),
-        }
-    }
-
-    pub fn run_opcode_old(&mut self, opcode: u16) {
-        self.opcode = opcode;
-
         match opcode {
             0b00000000 => self.op_nop(),
             0b00001000 => self.op_return(),
@@ -572,27 +561,31 @@ impl PIC16F628A {
                 match id {
                     0b00 => {
                         // Byte oriented
-                        let code = opcode >> 8 & 0x0F;
+                        let code = opcode & 0xF00;
                         let f: u8 = (opcode & 0x7F) as u8;
-                        let d = ((opcode >> 7) & 1) > 0;
+                        let d = if code < 2 {
+                            (opcode & 0x80) > 0
+                        } else {
+                            false
+                        };
 
                         match code {
-                            0 => self.op_movwf(),
-                            1 => self.op_clrf(f),
-                            2 => self.op_subwf(f, d),
-                            3 => self.op_decf(f, d),
-                            4 => self.op_iorwf(f, d),
-                            5 => self.op_andwf(f, d),
-                            6 => self.op_xorwf(),
-                            7 => self.op_addwf(f, d),
-                            8 => self.op_movf(f, d),
-                            9 => self.op_comf(f, d),
-                            10 => self.op_incf(f, d),
-                            11 => self.op_decfsz(f, d),
-                            12 => self.op_rrf(),
-                            13 => self.op_rlf(),
-                            14 => self.op_swapf(),
-                            15 => self.op_incfsz(f, d),
+                            0x000 => self.op_movwf(f),
+                            0x100 => self.op_clrf(f),
+                            0x200 => self.op_subwf(f, d),
+                            0x300 => self.op_decf(f, d),
+                            0x400 => self.op_iorwf(f, d),
+                            0x500 => self.op_andwf(f, d),
+                            0x600 => self.op_xorwf(f, d),
+                            0x700 => self.op_addwf(f, d),
+                            0x800 => self.op_movf(f, d),
+                            0x900 => self.op_comf(f, d),
+                            0xA00 => self.op_incf(f, d),
+                            0xB00 => self.op_decfsz(f, d),
+                            0xC00 => self.op_rrf(f, d),
+                            0xD00 => self.op_rlf(f, d),
+                            0xE00 => self.op_swapf(f, d),
+                            0xF00 => self.op_incfsz(f, d),
                             _ => println!("Unused OPCODE {}", opcode),
                         }
                     }
@@ -604,31 +597,36 @@ impl PIC16F628A {
                         let f: u8 = (opcode & 0x7F) as u8;
 
                         match code {
-                            0 => self.op_bcf(),
-                            1 => self.op_bsf(),
-                            2 => self.op_btfsc(),
-                            3 => self.op_btfss(),
+                            0 => self.op_bcf(f, b),
+                            1 => self.op_bsf(f, b),
+                            2 => self.op_btfsc(f, b),
+                            3 => self.op_btfss(f, b),
                             _ => println!("Unused OPCODE {}", opcode),
                         }
                     }
 
-                    _ => {
-                        // Literal and control
+                    0b10 => {
+                        // Control
                         match opcode >> 11 & 0x7 {
-                            0b100 => self.op_call(),
-                            0b101 => self.op_goto(),
-                            _ => match opcode >> 10 & 0xF {
-                                0b1100 => self.op_movlw(),
-                                0b1101 => self.op_retlw(),
-                                _ => match opcode >> 9 & 0x1F {
-                                    0b11110 => self.op_sublw(),
-                                    0b11111 => self.op_addlw(),
-                                    _ => match opcode >> 8 & 0x3F {
-                                        0b111000 => self.op_iorlw(),
-                                        0b111001 => self.op_andlw(),
-                                        0b111010 => self.op_xorlw(),
-                                        _ => println!("Unused OPCODE {}", opcode),
-                                    },
+                            0b100 => self.op_call(opcode & 0x7FF),
+                            0b101 => self.op_goto(opcode & 0x7FF),
+                            _ => println!("Unused OPCODE {}", opcode)
+                        }
+                    }
+
+                    _ => {
+                        // Literal
+                        match opcode >> 10 & 0xF {
+                            0b1100 => self.op_movlw(opcode as u8),
+                            0b1101 => self.op_retlw(opcode as u8),
+                            _ => match opcode >> 9 & 0x1F {
+                                0b11110 => self.op_sublw(opcode as u8),
+                                0b11111 => self.op_addlw(opcode as u8),
+                                _ => match opcode >> 8 & 0x3F {
+                                    0b111000 => self.op_iorlw(opcode as u8),
+                                    0b111001 => self.op_andlw(opcode as u8),
+                                    0b111010 => self.op_xorlw(opcode as u8),
+                                    _ => println!("Unused OPCODE {}", opcode),
                                 },
                             },
                         }
@@ -728,6 +726,8 @@ impl PIC16F628A {
         } else {
             self.w = data;
         }
+
+        self.increment_pc();
     }
 
     fn op_incfsz(&mut self, f: u8, d: bool) {
@@ -771,22 +771,17 @@ impl PIC16F628A {
     }
 
     // Move W to f
-    fn op_movwf_new(&mut self, f: u8) {
+    fn op_movwf(&mut self, f: u8) {
         self.write(f, self.w);
-    }
-
-    fn op_movwf(&mut self) {
-        self.f = (self.opcode & 0x7f) as u8;
-        self.op_movwf_new(self.f);
     }
 
     // No Operation
     fn op_nop(&mut self) {
-        return;
+        self.increment_pc();
     }
 
     // Rotate Left f through Carry
-    fn op_rlf_new(&mut self, f: u8, d: bool) {
+    fn op_rlf(&mut self, f: u8, d: bool) {
         let mut data = self.read(f) as u16;
         data = (data << 1) + self.get_carry_flag() as u16;
 
@@ -799,15 +794,8 @@ impl PIC16F628A {
         }
     }
 
-    fn op_rlf(&mut self) {
-        self.f = (self.opcode & 0x7f) as u8;
-        self.d = (self.opcode >> 7) & 1 > 0;
-
-        self.op_rlf_new(self.f, self.d);
-    }
-
     // Rotate Right f through Carry
-    fn op_rrf_new(&mut self, f: u8, d: bool) {
+    fn op_rrf(&mut self, f: u8, d: bool) {
         let mut data = self.read(f) as u16;
         let new_carry = (data & 1) > 0;
         data = data >> 1 + ((self.get_carry_flag() as u16) << 7);
@@ -819,13 +807,6 @@ impl PIC16F628A {
         } else {
             self.w = data as u8;
         }
-    }
-
-    fn op_rrf(&mut self) {
-        self.f = (self.opcode & 0x7f) as u8;
-        self.d = (self.opcode >> 7) & 1 > 0;
-
-        self.op_rrf_new(self.f, self.d);
     }
 
     fn op_subwf(&mut self, f: u8, d: bool) {
@@ -937,17 +918,18 @@ impl PIC16F628A {
     }
 
     // Inclusive OR literal with W
-    fn op_iorlw(&mut self) {
-        todo!();
+    fn op_iorlw(&mut self, k: u8) {
+        self.w |= k;
+        self.set_zero_flag(self.w == 0);
     }
 
     // Move literal to W
-    fn op_movlw(&mut self) {
-        todo!();
+    fn op_movlw(&mut self, k: u8) {
+        self.w = k;
     }
 
     // Return with literal in W
-    fn op_retlw(&mut self) {
+    fn op_retlw(&mut self, k: u8) {
         todo!();
     }
 
@@ -967,12 +949,20 @@ impl PIC16F628A {
     }
 
     // Subtract W from literal
-    fn op_sublw(&mut self) {
-        todo!();
+    fn op_sublw(&mut self, k: u8) {
+        let acc = self.w as i8;
+        let result = acc.wrapping_sub(k as i8);
+
+        self.set_zero_flag(result == 0);
+        self.set_carry_flag(result >= 0);
+        // TODO Set DC Flag
+
+        self.w = result as u8;
     }
 
     // Exclusive OR literal with W
-    fn op_xorlw(&mut self) {
-        todo!();
+    fn op_xorlw(&mut self, k: u8) {
+        self.w ^= k;
+        self.set_zero_flag(self.w == 0);
     }
 }
