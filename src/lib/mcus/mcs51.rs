@@ -1,3 +1,5 @@
+use crate::lib::decompiler::mcs51;
+
 #[derive(Debug, Clone, Copy)]
 pub enum MCS51_REGISTERS {
     P0 = 0,
@@ -48,6 +50,7 @@ pub struct MCS51 {
     pub ram: [u8; 255],
     pub additional_cycles: u8,
     pub dispatch: [fn(&mut MCS51); 256],
+    pub debug: bool,
 }
 
 impl MCS51 {
@@ -59,6 +62,7 @@ impl MCS51 {
             special_function_registers: [0; MCS51_REGISTERS::REGISTER_COUNT as usize],
             additional_cycles: 0,
             dispatch: [|cpu| {}; 256],
+            debug: false,
         };
 
         mcs51
@@ -162,10 +166,12 @@ impl MCS51 {
         return (val & bit) != 0;
     }
 
-    pub fn write_bit(&mut self, address: u8, value: bool) {
-        let register = (address >> 3) as u8;
-        let bit = (address & 0x7) as u8;
-        let addr = (register * 0x08) + 0x80;
+    pub fn write_bit(&mut self, address: u8, value: bool) {        
+        let addr = address & 0xF8;
+
+        println!("{:0x} {:0x}", address, addr);
+
+        let bit = address & 0x7;
         let mut src = *self.read(addr).unwrap();
 
         if value {
@@ -1125,7 +1131,7 @@ impl MCS51 {
         };
         self.dispatch[0x73] = |cpu: &mut MCS51| {
             cpu.op_jmp();
-            cpu.opcode_additional_work("JMP", 1, 0);
+            cpu.opcode_additional_work("JMP", 1, 1);
         };
         self.dispatch[0x74] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1));
@@ -1177,11 +1183,11 @@ impl MCS51 {
         };
         self.dispatch[0x80] = |cpu: &mut MCS51| {
             cpu.op_sjmp(MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("SJMP", 1, 0);
+            cpu.opcode_additional_work("SJMP", 1, 1);
         };
         self.dispatch[0x81] = |cpu: &mut MCS51| {
             cpu.op_ajmp();
-            cpu.opcode_additional_work("AJMP", 1, 0);
+            cpu.opcode_additional_work("AJMP", 1, 1);
         };
         self.dispatch[0x82] = |cpu: &mut MCS51| {
             cpu.op_anl_c(MCS51_ADDRESSING::DATA(1), false);
@@ -1204,46 +1210,46 @@ impl MCS51 {
                 MCS51_ADDRESSING::DIRECT(1),
                 MCS51_ADDRESSING::INDIRECT_Ri(0),
             );
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x87] = |cpu: &mut MCS51| {
             cpu.op_mov(
                 MCS51_ADDRESSING::DIRECT(1),
                 MCS51_ADDRESSING::INDIRECT_Ri(1),
             );
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x88] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(0));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x89] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(1));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x8A] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(2));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x8B] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(3));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x8C] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(4));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x8D] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(5));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x8E] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(6));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x8F] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::REGISTER(7));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x90] = |cpu: &mut MCS51| {
             cpu.op_mov_dptr(MCS51_ADDRESSING::DATA(1));
@@ -1251,67 +1257,67 @@ impl MCS51 {
         };
         self.dispatch[0x91] = |cpu: &mut MCS51| {
             cpu.op_acall();
-            cpu.opcode_additional_work("ACALL", 1, 0);
+            cpu.opcode_additional_work("ACALL", 1, 1);
         };
         self.dispatch[0x92] = |cpu: &mut MCS51| {
             cpu.op_mov_bit_c(MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("MOV", 1, 1);
+            cpu.opcode_additional_work("MOV", 1, 2);
         };
         self.dispatch[0x93] = |cpu: &mut MCS51| {
             cpu.op_movc_dptr();
-            cpu.opcode_additional_work("MOVC", 1, 0);
+            cpu.opcode_additional_work("MOVC", 1, 1);
         };
         self.dispatch[0x94] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("SUBB", 0, 1);
+            cpu.opcode_additional_work("SUBB", 0, 2);
         };
         self.dispatch[0x95] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("SUBB", 0, 1);
+            cpu.opcode_additional_work("SUBB", 0, 2);
         };
         self.dispatch[0x96] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::INDIRECT_Ri(0));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x97] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::INDIRECT_Ri(1));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x98] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(0));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x99] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(1));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x9A] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(2));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x9B] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(3));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x9C] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(4));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x9D] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(5));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x9E] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(6));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0x9F] = |cpu: &mut MCS51| {
             cpu.op_subb(MCS51_ADDRESSING::REGISTER(7));
-            cpu.opcode_additional_work("SUBB", 0, 0);
+            cpu.opcode_additional_work("SUBB", 0, 1);
         };
         self.dispatch[0xA0] = |cpu: &mut MCS51| {
             cpu.op_orl_c(MCS51_ADDRESSING::DATA(1), true);
-            cpu.opcode_additional_work("ORLC", 1, 1);
+            cpu.opcode_additional_work("ORLC", 1, 2);
         };
         self.dispatch[0xA1] = |cpu: &mut MCS51| {
             cpu.op_ajmp();
@@ -1319,15 +1325,15 @@ impl MCS51 {
         };
         self.dispatch[0xA2] = |cpu: &mut MCS51| {
             cpu.op_mov_c_bit(MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("MOV", 0, 1);
+            cpu.opcode_additional_work("MOV", 0, 2);
         };
         self.dispatch[0xA3] = |cpu: &mut MCS51| {
             cpu.op_inc_dptr();
-            cpu.opcode_additional_work("INC DPTR", 1, 0);
+            cpu.opcode_additional_work("INC DPTR", 1, 1);
         };
         self.dispatch[0xA4] = |cpu: &mut MCS51| {
             cpu.op_mul();
-            cpu.opcode_additional_work("MUL", 3, 0)
+            cpu.opcode_additional_work("MUL", 3, 1)
         };
         self.dispatch[0xA5] = |cpu: &mut MCS51| cpu.opcode_additional_work("RESERVED", 0, 0);
         self.dispatch[0xA6] = |cpu: &mut MCS51| {
@@ -1335,67 +1341,112 @@ impl MCS51 {
                 MCS51_ADDRESSING::INDIRECT_Ri(0),
                 MCS51_ADDRESSING::DIRECT(1),
             );
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xA7] = |cpu: &mut MCS51| {
             cpu.op_mov(
                 MCS51_ADDRESSING::INDIRECT_Ri(1),
                 MCS51_ADDRESSING::DIRECT(1),
             );
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xA8] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xA9] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xAA] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xAB] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xAC] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xAD] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xAE] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
         self.dispatch[0xAF] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DIRECT(1));
-            cpu.opcode_additional_work("MOV", 1, 1)
+            cpu.opcode_additional_work("MOV", 1, 2)
         };
-        self.dispatch[0xB0] = |cpu: &mut MCS51| {};
+        self.dispatch[0xB0] = |cpu: &mut MCS51| {
+            cpu.op_anl_c(MCS51_ADDRESSING::DIRECT(1), true);
+            cpu.opcode_additional_work("ANL", 1, 2)
+        };
         self.dispatch[0xB1] = |cpu: &mut MCS51| {};
         self.dispatch[0xB2] = |cpu: &mut MCS51| {};
         self.dispatch[0xB3] = |cpu: &mut MCS51| {};
-        self.dispatch[0xB4] = |cpu: &mut MCS51| {};
-        self.dispatch[0xB5] = |cpu: &mut MCS51| {};
-        self.dispatch[0xB6] = |cpu: &mut MCS51| {};
-        self.dispatch[0xB7] = |cpu: &mut MCS51| {};
-        self.dispatch[0xB8] = |cpu: &mut MCS51| {};
-        self.dispatch[0xB9] = |cpu: &mut MCS51| {};
-        self.dispatch[0xBA] = |cpu: &mut MCS51| {};
-        self.dispatch[0xBB] = |cpu: &mut MCS51| {};
-        self.dispatch[0xBC] = |cpu: &mut MCS51| {};
-        self.dispatch[0xBD] = |cpu: &mut MCS51| {};
-        self.dispatch[0xBE] = |cpu: &mut MCS51| {};
-        self.dispatch[0xBF] = |cpu: &mut MCS51| {};
+        self.dispatch[0xB4] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xB5] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xB6] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::INDIRECT_Ri(0), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xB7] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::INDIRECT_Ri(1), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xB8] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xB9] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xBA] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xBB] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xBC] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xBD] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xBE] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
+        self.dispatch[0xBF] = |cpu: &mut MCS51| {
+            cpu.op_cjne(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1), MCS51_ADDRESSING::DATA(2));
+            cpu.opcode_additional_work("CJNE", 2, 3)
+        };
         self.dispatch[0xC0] = |cpu: &mut MCS51| {};
         self.dispatch[0xC1] = |cpu: &mut MCS51| {};
-        self.dispatch[0xC2] = |cpu: &mut MCS51| {};
-        self.dispatch[0xC3] = |cpu: &mut MCS51| {};
+        self.dispatch[0xC2] = |cpu: &mut MCS51| {
+            cpu.op_clr(MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("CLR", 2, 2)
+        };
+        self.dispatch[0xC3] = |cpu: &mut MCS51| {
+            cpu.set_carry_flag(false);
+            cpu.opcode_additional_work("CLR C", 1, 1)
+        };
         self.dispatch[0xC4] = |cpu: &mut MCS51| {};
         self.dispatch[0xC5] = |cpu: &mut MCS51| {};
         self.dispatch[0xC6] = |cpu: &mut MCS51| {};
@@ -1416,19 +1467,46 @@ impl MCS51 {
         self.dispatch[0xD5] = |cpu: &mut MCS51| {};
         self.dispatch[0xD6] = |cpu: &mut MCS51| {};
         self.dispatch[0xD7] = |cpu: &mut MCS51| {};
-        self.dispatch[0xD8] = |cpu: &mut MCS51| {};
-        self.dispatch[0xD9] = |cpu: &mut MCS51| {};
-        self.dispatch[0xDA] = |cpu: &mut MCS51| {};
-        self.dispatch[0xDB] = |cpu: &mut MCS51| {};
-        self.dispatch[0xDC] = |cpu: &mut MCS51| {};
-        self.dispatch[0xDD] = |cpu: &mut MCS51| {};
-        self.dispatch[0xDE] = |cpu: &mut MCS51| {};
-        self.dispatch[0xDF] = |cpu: &mut MCS51| {};
+        self.dispatch[0xD8] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xD9] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xDA] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xDB] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xDC] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xDD] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xDE] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
+        self.dispatch[0xDF] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("DJNZ", 0, 2)
+        };
         self.dispatch[0xE0] = |cpu: &mut MCS51| {};
         self.dispatch[0xE1] = |cpu: &mut MCS51| {};
         self.dispatch[0xE2] = |cpu: &mut MCS51| {};
         self.dispatch[0xE3] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE4] = |cpu: &mut MCS51| {};
+        self.dispatch[0xE4] = |cpu: &mut MCS51| {
+            cpu.op_clr(MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("CLR A", 1, 1)
+        };
         self.dispatch[0xE5] = |cpu: &mut MCS51| {};
         self.dispatch[0xE6] = |cpu: &mut MCS51| {};
         self.dispatch[0xE7] = |cpu: &mut MCS51| {};
@@ -1445,17 +1523,50 @@ impl MCS51 {
         self.dispatch[0xF2] = |cpu: &mut MCS51| {};
         self.dispatch[0xF3] = |cpu: &mut MCS51| {};
         self.dispatch[0xF4] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF5] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF6] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF7] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF8] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF9] = |cpu: &mut MCS51| {};
-        self.dispatch[0xFA] = |cpu: &mut MCS51| {};
-        self.dispatch[0xFB] = |cpu: &mut MCS51| {};
-        self.dispatch[0xFC] = |cpu: &mut MCS51| {};
-        self.dispatch[0xFD] = |cpu: &mut MCS51| {};
-        self.dispatch[0xFE] = |cpu: &mut MCS51| {};
-        self.dispatch[0xFF] = |cpu: &mut MCS51| {};
+        self.dispatch[0xF5] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 2);
+        };
+        self.dispatch[0xF6] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::INDIRECT_Ri(0), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xF7] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::INDIRECT_Ri(1), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xF8] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xF9] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xFA] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xFB] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xFC] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xFD] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xFE] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
+        self.dispatch[0xFF] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::ACCUMULATOR);
+            cpu.opcode_additional_work("MOV", 0, 1);
+        };
     }
 
     pub fn opcode_dispatch_table(&mut self, opcode: u8) {
@@ -2287,6 +2398,37 @@ impl MCS51 {
         if cycles != 0 {
             self.additional_cycles = cycles
         };
+        if self.debug {
+            println!("{:0x} : {}", self.pc, _label);
+        }
+    }
+
+    pub fn op_djnz(&mut self, addr: MCS51_ADDRESSING, rel: MCS51_ADDRESSING) {
+        self.pc = self.pc + 2;
+        let val = self.get_u8(addr).unwrap().overflowing_sub(1);
+        let rel_val = self.get_u8(rel).unwrap();
+        
+        if val.0 != 0 {
+            self.write_pc_rel(rel_val as u16, rel_val & 0x80 > 0)
+        }
+    }
+
+    pub fn op_clr(&mut self, bit_addr: MCS51_ADDRESSING) {
+        self.write_bit(self.get_u8(bit_addr).unwrap(), false);
+    }
+
+    pub fn op_cjne(&mut self, dest: MCS51_ADDRESSING, src: MCS51_ADDRESSING, rel: MCS51_ADDRESSING) {
+        self.pc = self.pc + 3;
+
+        let dest_data = self.get_u8(dest).unwrap();
+        let src_data = self.get_u8(src).unwrap();
+
+        if dest_data != src_data {
+            let code = self.get_u8(rel).unwrap();
+            self.write_pc_rel(code as u16, code & 0x80 != 0)
+        }
+
+        self.set_carry_flag(dest_data < src_data);
     }
 
     pub fn op_inc_dptr(&mut self) {

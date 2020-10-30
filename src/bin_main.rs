@@ -6,6 +6,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::time::{Duration, Instant};
+use std::process::Command;
 
 #[cfg(test)]
 mod tests {
@@ -389,6 +390,35 @@ fn test_decompile_mcs51() {
     dec.write_to_file("data/code.asm");
 }
 
+fn run_mcs51(filename: &str) {
+    let mut f = File::open(filename).expect("no file found");
+    let metadata = fs::metadata(filename).expect("unable to read metadata");
+    let mut buffer = vec![0; metadata.len() as usize];
+    f.read(&mut buffer).expect("buffer overflow");
+
+    let mut mcu = MCS51::new();
+    mcu.generate_opcode_array();
+    mcu.set_program(buffer.clone());
+    //mcu.debug = true;
+
+    let mut decomp = MCS51_Decompiler::new();
+    decomp.program = buffer;
+    decomp.decompile(0);
+
+    let mut buf: String = String::new();
+
+    while true {
+        let pc = &mcu.pc;
+        println!("{:0x}", pc);
+        let inst = decomp.instructions[pc].clone();
+        println!("{}", inst);
+        mcu.next_instruction();
+        let _ = std::io::stdin().read(&mut [0u8]).unwrap();
+        let _ = std::io::stdin().read(&mut [0u8]).unwrap();
+    }
+}
+
 fn main() {
-    test_emulator_16f628a();
+    //test_emulator_mcs51();
+    run_mcs51("data/1594462804_raw.bin");
 }

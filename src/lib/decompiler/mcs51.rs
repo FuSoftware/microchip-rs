@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::fs;
 
+#[derive(Debug, Clone)]
 pub struct MCS51_Decompiler_Instruction {
     address: u16,
     instruction: Vec<u16>,
@@ -141,7 +142,47 @@ impl MCS51_Decompiler {
     pub fn bit_address_name(address: u8) -> String {
         let bit_offset = address & 0x07;
         return match address {
-            0x00..=0x7F => format!("{:02x}.{}", address / 8, address & 0x07),
+            0x80..=0x87 => format!("P0.{}", bit_offset),
+            0x88..=0x8F => format!("TCON.{}", bit_offset),
+            0x90..=0x97 => format!("P1.{}", bit_offset),
+            0x98..=0x9F => format!("SCON.{}", bit_offset),
+            0xA0..=0xA7 => format!("P2.{}", bit_offset),
+            0xA8=> format!("IE.EX0"),
+            0xA9=> format!("IE.ET0"),
+            0xAA=> format!("IE.EX1"),
+            0xAB=> format!("IE.ET1"),
+            0xAC=> format!("IE.ES"),
+            0xAD=> format!("IE.ET2"),
+            0xAE=> format!("IE.6"),
+            0xAF=> format!("IE.EA"),
+            0xB0..=0xB7 => format!("P3.{}", bit_offset),
+            0xB8=> format!("IP.PX0"),
+            0xB9=> format!("IP.PT0"),
+            0xBA=> format!("IP.PX1"),
+            0xBB=> format!("IP.PT1"),
+            0xBC=> format!("IP.PS"),
+            0xBD=> format!("IP.PT2"),
+            0xBE=> format!("IP.6"),
+            0xBF=> format!("IP.7"),
+            0xC8..=0xCF => format!("T2CON.{}", bit_offset),
+            0xD0=> format!("PSW.P"),
+            0xD1=> format!("PSW.1"),
+            0xD2=> format!("PSW.OV"),
+            0xD3=> format!("PSW.RS0"),
+            0xD4=> format!("PSW.RS1"),
+            0xD5=> format!("PSW.F0"),
+            0xD6=> format!("PSW.AC"),
+            0xD7=> format!("PSW.CY"),
+            0xE0..=0xE7 => format!("ACC.{}", bit_offset),
+            0xF0..=0xF7 => format!("B.{}", bit_offset),
+            _ => format!("{:02x}", address),
+        };
+    }
+
+    
+    pub fn bit_address_name_num(address: u8) -> String {
+        let bit_offset = address & 0x07;
+        return match address {
             0x80..=0x87 => format!("P0.{}", bit_offset),
             0x88..=0x8F => format!("TCON.{}", bit_offset),
             0x90..=0x97 => format!("P1.{}", bit_offset),
