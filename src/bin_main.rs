@@ -299,7 +299,7 @@ fn test_emulator_mcs51() {
     ]);
     */
 
-    /*
+    
     mcu.set_program(vec![
         0x08, // Increment R1
         0x08, // Increment R1
@@ -313,9 +313,9 @@ fn test_emulator_mcs51() {
         0x08, // Increment R1
         0x02, 0x00, 0x00, // Jump to beginning
     ]);
-    */
-
     
+
+    /*
     mcu.set_program(vec![
         0x00, // NOP
         0x00, // NOP
@@ -329,6 +329,7 @@ fn test_emulator_mcs51() {
         0x00, // NOP
         0x02, 0x00, 0x00 // Jump to beginning
     ]);
+    */
     
 
     
@@ -405,11 +406,9 @@ fn run_mcs51(filename: &str) {
     decomp.program = buffer;
     decomp.decompile(0);
 
-    let mut buf: String = String::new();
-
     while true {
         let pc = &mcu.pc;
-        println!("{:0x}", pc);
+        println!("{:0x} {:0x}", pc, decomp.program[*pc as usize]);
         let inst = decomp.instructions[pc].clone();
         println!("{}", inst);
         mcu.next_instruction();
