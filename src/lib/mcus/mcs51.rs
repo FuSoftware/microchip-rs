@@ -69,9 +69,9 @@ impl MCS51 {
     }
 
     pub fn push_stack(&mut self, value: u8) {
+        self.write_sfr_rel(MCS51_REGISTERS::SP, 1, false);
         let sp = self.get_stack_pointer();
         self.write(sp, value);
-        self.write_sfr_rel(MCS51_REGISTERS::SP, 1, false);
     }
 
     pub fn pop_stack(&mut self) -> u8 {
@@ -1452,7 +1452,10 @@ impl MCS51 {
             cpu.set_carry_flag(false);
             cpu.opcode_additional_work("CLR C", 1, 1)
         };
-        self.dispatch[0xC4] = |cpu: &mut MCS51| {};
+        self.dispatch[0xC4] = |cpu: &mut MCS51| {
+            cpu.op_swap();
+            cpu.opcode_additional_work("SWAP", 1, 1)
+        };
         self.dispatch[0xC5] = |cpu: &mut MCS51| {};
         self.dispatch[0xC6] = |cpu: &mut MCS51| {};
         self.dispatch[0xC7] = |cpu: &mut MCS51| {};
@@ -1469,65 +1472,112 @@ impl MCS51 {
         self.dispatch[0xD2] = |cpu: &mut MCS51| {};
         self.dispatch[0xD3] = |cpu: &mut MCS51| {};
         self.dispatch[0xD4] = |cpu: &mut MCS51| {};
-        self.dispatch[0xD5] = |cpu: &mut MCS51| {};
+        self.dispatch[0xD5] = |cpu: &mut MCS51| {
+            cpu.op_djnz(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(2), 3);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
+        };
         self.dispatch[0xD6] = |cpu: &mut MCS51| {};
         self.dispatch[0xD7] = |cpu: &mut MCS51| {};
         self.dispatch[0xD8] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xD9] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xDA] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xDB] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xDC] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xDD] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xDE] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
         self.dispatch[0xDF] = |cpu: &mut MCS51| {
-            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1));
-            cpu.opcode_additional_work("DJNZ", 0, 0)
+            cpu.op_djnz(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1), 2);
+            cpu.opcode_additional_work("DJNZ", 2, 0)
         };
-        self.dispatch[0xE0] = |cpu: &mut MCS51| {};
+        self.dispatch[0xE0] = |cpu: &mut MCS51| {
+            cpu.opcode_additional_work("MOVX A, @DPTR", 2, 1);
+        };
         self.dispatch[0xE1] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE2] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE3] = |cpu: &mut MCS51| {};
+        self.dispatch[0xE2] = |cpu: &mut MCS51| {
+            cpu.opcode_additional_work("MOVX A, @R0", 2, 1);
+        };
+        self.dispatch[0xE3] = |cpu: &mut MCS51| {
+            cpu.opcode_additional_work("MOVX A, @R1", 2, 1);
+        };
         self.dispatch[0xE4] = |cpu: &mut MCS51| {
             cpu.op_clr(MCS51_ADDRESSING::ACCUMULATOR);
             cpu.opcode_additional_work("CLR A", 1, 1)
         };
-        self.dispatch[0xE5] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE6] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE7] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE8] = |cpu: &mut MCS51| {};
-        self.dispatch[0xE9] = |cpu: &mut MCS51| {};
-        self.dispatch[0xEA] = |cpu: &mut MCS51| {};
-        self.dispatch[0xEB] = |cpu: &mut MCS51| {};
-        self.dispatch[0xEC] = |cpu: &mut MCS51| {};
-        self.dispatch[0xED] = |cpu: &mut MCS51| {};
-        self.dispatch[0xEE] = |cpu: &mut MCS51| {};
-        self.dispatch[0xEF] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF0] = |cpu: &mut MCS51| {};
+        self.dispatch[0xE5] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::DIRECT(1));
+            cpu.opcode_additional_work("MOV", 1, 2)
+        };
+        self.dispatch[0xE6] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(0));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xE7] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::INDIRECT_Ri(1));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xE8] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(0));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xE9] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(1));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xEA] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(2));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xEB] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(3));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xEC] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(4));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xED] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(5));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xEE] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(6));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xEF] = |cpu: &mut MCS51| {
+            cpu.op_mov(MCS51_ADDRESSING::ACCUMULATOR, MCS51_ADDRESSING::REGISTER(7));
+            cpu.opcode_additional_work("MOV", 1, 1)
+        };
+        self.dispatch[0xF0] = |cpu: &mut MCS51| {
+            cpu.opcode_additional_work("MOVX @DPTR, A", 2, 1);
+        };
         self.dispatch[0xF1] = |cpu: &mut MCS51| {};
         self.dispatch[0xF2] = |cpu: &mut MCS51| {};
         self.dispatch[0xF3] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF4] = |cpu: &mut MCS51| {};
+        self.dispatch[0xF4] = |cpu: &mut MCS51| {
+            cpu.op_cpl_a();
+            cpu.opcode_additional_work("CPL A", 1, 1);
+        };
         self.dispatch[0xF5] = |cpu: &mut MCS51| {
             cpu.op_mov(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::ACCUMULATOR);
             cpu.opcode_additional_work("MOV", 0, 2);
@@ -2397,35 +2447,35 @@ impl MCS51 {
             0xD6 => {},
             0xD7 => {},
             0xD8 => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(0), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xD9 => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(1), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xDA => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(2), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xDB => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(3), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xDC => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(4), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xDD => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(5), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xDE => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(6), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xDF => {
-                self.op_djnz(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1));
+                self.op_djnz(MCS51_ADDRESSING::REGISTER(7), MCS51_ADDRESSING::DATA(1), 2);
                 self.opcode_additional_work("DJNZ", 0, 0)
             },
             0xE0 => {},
@@ -2511,12 +2561,61 @@ impl MCS51 {
         }
     }
 
-    pub fn op_djnz(&mut self, addr: MCS51_ADDRESSING, rel: MCS51_ADDRESSING) {
-        self.pc = self.pc + 2;
+    /*
+    Complement Accumulator
+
+    Each bit of the Accumulator is logically complemented (one's complement). 
+    Bits which previously contained a one are changed to a zero and vice-versa. 
+    No flags are affected
+    */
+
+    pub fn op_cpl_a(&mut self) {
+        let acc = self.get_accumulator();
+        self.set_accumulator(!acc);
+    }
+
+    /*
+    Swap nibbles within the Accumulator
+
+    SWAP A interchanges the low- and high-order nibbles (four-bit fields) of the Accumulator
+    (bits 3-0 and bits 7-4). The operation can also be thOUght of as a four-bit rotate instruction. No
+    flags are affected.
+    */
+
+    pub fn op_swap(&mut self) {
+        let acc = self.get_accumulator();
+        let lo = acc & 0xF;
+        let hi = (acc & 0xF0) >> 4;
+        self.set_accumulator((lo << 4) + hi);
+    }
+
+    pub fn op_movx_a_ri(&mut self, reg: u8) {
+        let src_addr = self.get_u8(MCS51_ADDRESSING::REGISTER(reg));
+    }
+
+    pub fn op_movx_ri_a(&mut self, reg: u8) {
+        let dest_addr = self.get_u8(MCS51_ADDRESSING::REGISTER(reg));
+    }
+
+    /*
+    Decrement and Jump if Not Zero
+
+    DJNZ decrements the location indicated by 1, and branches to the address indicated by the
+    second operand if the resulting value is not zero. An original value of OOH will underflow to
+    OFFH. No flags are affected. The branch destination would be computed by adding the signed
+    relative-displacement value in the last instruction byte to the PC, after incrementing the PC to
+    the fIrst byte of the following instruction.
+
+    The location decremented may be a register or directly addressed byte.
+
+    Note: When this instruction is used to modify an output port, the value used as the original
+    port data will be read from the output data latch, not the input pins.
+    */
+
+    pub fn op_djnz(&mut self, addr: MCS51_ADDRESSING, rel: MCS51_ADDRESSING, pc_offset: u16) {
+        self.pc = self.pc + pc_offset;
         let val = self.get_u8(addr).unwrap().wrapping_sub(1);
         let rel_val = self.get_i8(rel).unwrap();
-
-        println!("{:?} {} {}", addr, val, rel_val as i16);
         
         if val != 0 {
             self.write_pc_reli(rel_val as i16);
@@ -2809,10 +2908,11 @@ impl MCS51 {
     }
 
     pub fn op_lcall(&mut self, addr16: MCS51_ADDRESSING) {
-        self.pc = self.pc + 2;
+        let new_pc = self.get_u16(addr16).unwrap();
+        self.pc = self.pc + 3;
         self.push_stack((self.pc & 0xFF) as u8);
-        self.push_stack(((self.pc >> 2) & 0xFF) as u8);
-        self.pc = self.get_u16(addr16).unwrap();
+        self.push_stack(((self.pc >> 8) & 0xFF) as u8);
+        self.pc = new_pc;
     }
 
     pub fn op_jbc(&mut self, bit_addr: MCS51_ADDRESSING, code_addr: MCS51_ADDRESSING) {
@@ -2865,9 +2965,9 @@ impl MCS51 {
     }
 
     pub fn op_ret(&mut self) {
-        let pc_hi = self.pop_stack();
-        let pc_lo = self.pop_stack();
-        self.pc = (pc_hi as u16) << 8 + pc_lo as u16;
+        let pc_hi = self.pop_stack() as u16;
+        let pc_lo = self.pop_stack() as u16;
+        self.pc = (pc_hi << 8) + pc_lo;
     }
 
     // Decrement
