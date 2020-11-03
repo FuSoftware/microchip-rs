@@ -406,14 +406,20 @@ fn run_mcs51(filename: &str) {
     decomp.program = buffer;
     decomp.decompile(0);
 
-    while true {
+    let mut prev_pc: u16 = 0;
+
+    loop {
         let pc = &mcu.pc;
         println!("{:0x} {:0x}", pc, decomp.program[*pc as usize]);
         let inst = decomp.instructions[pc].clone();
         println!("{}", inst);
-        mcu.next_instruction();
-        let _ = std::io::stdin().read(&mut [0u8]).unwrap();
-        let _ = std::io::stdin().read(&mut [0u8]).unwrap();
+
+        if *pc != 0 && prev_pc == *pc {
+            break;
+        } else {
+            prev_pc = *pc;
+            mcu.next_instruction();
+        }
     }
 }
 
