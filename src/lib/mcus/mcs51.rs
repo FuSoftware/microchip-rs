@@ -1456,17 +1456,50 @@ impl MCS51 {
             cpu.op_swap();
             cpu.opcode_additional_work("SWAP", 1, 1)
         };
-        self.dispatch[0xC5] = |cpu: &mut MCS51| {};
-        self.dispatch[0xC6] = |cpu: &mut MCS51| {};
-        self.dispatch[0xC7] = |cpu: &mut MCS51| {};
-        self.dispatch[0xC8] = |cpu: &mut MCS51| {};
-        self.dispatch[0xC9] = |cpu: &mut MCS51| {};
-        self.dispatch[0xCA] = |cpu: &mut MCS51| {};
-        self.dispatch[0xCB] = |cpu: &mut MCS51| {};
-        self.dispatch[0xCC] = |cpu: &mut MCS51| {};
-        self.dispatch[0xCD] = |cpu: &mut MCS51| {};
-        self.dispatch[0xCE] = |cpu: &mut MCS51| {};
-        self.dispatch[0xCF] = |cpu: &mut MCS51| {};
+        self.dispatch[0xC5] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::DIRECT(1));
+            cpu.opcode_additional_work("XCH", 1, 2)
+        };
+        self.dispatch[0xC6] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::INDIRECT_Ri(0));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xC7] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::INDIRECT_Ri(1));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xC8] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(0));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xC9] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(1));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xCA] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(2));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xCB] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(3));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xCC] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(4));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xCD] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(5));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xCE] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(6));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
+        self.dispatch[0xCF] = |cpu: &mut MCS51| {
+            cpu.op_xch(MCS51_ADDRESSING::REGISTER(7));
+            cpu.opcode_additional_work("XCH", 1, 1)
+        };
         self.dispatch[0xD0] = |cpu: &mut MCS51| {};
         self.dispatch[0xD1] = |cpu: &mut MCS51| {};
         self.dispatch[0xD2] = |cpu: &mut MCS51| {};
@@ -1571,9 +1604,15 @@ impl MCS51 {
         self.dispatch[0xF0] = |cpu: &mut MCS51| {
             cpu.opcode_additional_work("MOVX @DPTR, A", 2, 1);
         };
-        self.dispatch[0xF1] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF2] = |cpu: &mut MCS51| {};
-        self.dispatch[0xF3] = |cpu: &mut MCS51| {};
+        self.dispatch[0xF1] = |cpu: &mut MCS51| {
+            
+        };
+        self.dispatch[0xF2] = |cpu: &mut MCS51| {
+            cpu.opcode_additional_work("MOVX @R0, A", 2, 1);
+        };
+        self.dispatch[0xF3] = |cpu: &mut MCS51| {
+            cpu.opcode_additional_work("MOVX @R1, A", 2, 1);
+        };
         self.dispatch[0xF4] = |cpu: &mut MCS51| {
             cpu.op_cpl_a();
             cpu.opcode_additional_work("CPL A", 1, 1);
@@ -2562,6 +2601,21 @@ impl MCS51 {
     }
 
     /*
+    Exchange Accumulator with byte variable
+
+    XCH loads the Accumulator with the contents of the indicated variable, at the same time
+    writing the original Accumulator contents to the indicated variable.
+    */
+
+    pub fn op_xch(&mut self, addr: MCS51_ADDRESSING) {
+        let addr_val = self.get_u8(addr).unwrap();
+        let acc_val = self.get_accumulator();
+
+        self.set_accumulator(addr_val);
+        self.set_u8(addr, acc_val);
+    }
+
+    /*
     Complement Accumulator
 
     Each bit of the Accumulator is logically complemented (one's complement). 
@@ -2751,8 +2805,8 @@ impl MCS51 {
         self.pc = self.pc + 2;
 
         if acc != 0 {
-            let code = self.get_u8(code_addr).unwrap();
-            self.write_pc_rel(code as u16, code & 0x80 != 0)
+            let code = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(code as i16);
         }
     }
 
@@ -2761,8 +2815,8 @@ impl MCS51 {
         self.pc = self.pc + 2;
 
         if acc == 0 {
-            let code = self.get_u8(code_addr).unwrap();
-            self.write_pc_rel(code as u16, code & 0x80 != 0)
+            let code = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(code as i16);
         }
     }
 
@@ -2771,8 +2825,8 @@ impl MCS51 {
         self.pc = self.pc + 2;
 
         if !cf {
-            let code = self.get_u8(code_addr).unwrap();
-            self.write_pc_rel(code as u16, code & 0x80 != 0)
+            let code = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(code as i16);
         }
     }
 
@@ -2834,8 +2888,8 @@ impl MCS51 {
         self.pc = self.pc + 2;
 
         if cf {
-            let code = self.get_u8(code_addr).unwrap();
-            self.write_pc_rel(code as u16, code & 0x80 != 0)
+            let code = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(code as i16);
         }
     }
 
@@ -2920,15 +2974,11 @@ impl MCS51 {
         let bit_address = self.get_u8(bit_addr).unwrap();
 
         let bit: bool = self.read_bit(bit_address);
-        let rel = self.get_i8(code_addr).unwrap();
-
+            
         if bit {
             self.write_bit(bit_address, false);
-            if rel < 0 {
-                self.write_pc_rel((rel & 0x7F) as u16, true);
-            } else {
-                self.write_pc_rel(rel as u16, false);
-            }
+            let rel = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(rel as i16);
         }
     }
 
@@ -2937,14 +2987,10 @@ impl MCS51 {
         let bit_address = self.get_u8(bit_addr).unwrap();
 
         let bit: bool = self.read_bit(bit_address);
-        let rel = self.get_i8(code_addr).unwrap();
-
+        
         if !bit {
-            if rel < 0 {
-                self.write_pc_rel((rel & 0x7F) as u16, true);
-            } else {
-                self.write_pc_rel(rel as u16, false);
-            }
+            let rel = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(rel as i16);
         }
     }
 
@@ -2953,14 +2999,10 @@ impl MCS51 {
         let bit_address = self.get_u8(bit_addr).unwrap();
 
         let bit: bool = self.read_bit(bit_address);
-        let rel = self.get_i8(code_addr).unwrap();
-
+        
         if bit {
-            if rel < 0 {
-                self.write_pc_rel((rel & 0x7F) as u16, true);
-            } else {
-                self.write_pc_rel(rel as u16, false);
-            }
+            let rel = self.get_i8(code_addr).unwrap();
+            self.write_pc_reli(rel as i16);
         }
     }
 

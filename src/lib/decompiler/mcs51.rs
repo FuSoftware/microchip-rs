@@ -406,7 +406,7 @@ impl MCS51_Decompiler {
                 return MCS51_Decompiler_Instruction {
                     address: address,
                     instruction: vec![opcode as u16, bit_addr as u16, code_addr as u16],
-                    code: format!("JB {}, LAB_{:04x}", dest_name, new_address), //TODO Store as negative number
+                    code: format!("JB {}, LAB_{:04x}", dest_name, new_address),
                     next: vec![address + 3, new_address],
                 };
             }
@@ -602,6 +602,34 @@ impl MCS51_Decompiler {
                         MCS51_Decompiler::sfr_name(src as u8)
                     ),
                     next: vec![address + 3],
+                };
+            }
+
+            0x86..=0x87 => {
+                let src = self.get_u8(address, 1) as u16;
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16, src],
+                    code: format!(
+                        "MOV {}, @R{}",
+                        MCS51_Decompiler::sfr_name(src as u8),
+                        opcode & 0x01
+                    ),
+                    next: vec![address + 2],
+                };
+            }
+
+            0x88..=0x8F => {
+                let src = self.get_u8(address, 1) as u16;
+                return MCS51_Decompiler_Instruction {
+                    address: address,
+                    instruction: vec![opcode as u16, src],
+                    code: format!(
+                        "MOV {}, R{}",
+                        MCS51_Decompiler::sfr_name(src as u8),
+                        opcode & 0x07
+                    ),
+                    next: vec![address + 2],
                 };
             }
 
