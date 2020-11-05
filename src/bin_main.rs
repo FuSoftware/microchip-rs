@@ -413,14 +413,17 @@ fn run_mcs51(filename: &str) {
         println!("{:0x} {:0x}", pc, decomp.program[*pc as usize]);
         //let inst = decomp.instructions[pc].clone();
         let inst = decomp.get_instruction(*pc);
-        println!("{}", inst);
+        //println!("{}", inst);
 
+        /*
         if *pc != 0 && prev_pc == *pc {
             break;
         } else {
             prev_pc = *pc;
             mcu.next_instruction();
         }
+        */
+        mcu.next_instruction();
     }
 }
 
