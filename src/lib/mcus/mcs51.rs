@@ -1,4 +1,5 @@
 use crate::lib::decompiler::mcs51;
+use crate::lib::traits::component::*;
 
 #[derive(Debug, Clone, Copy)]
 pub enum MCS51_REGISTERS {
@@ -88,15 +89,15 @@ impl MCS51 {
     }
 
     pub fn get_stack_pointer(&mut self) -> u8 {
-        return *self.read_sfr(MCS51_REGISTERS::SP).unwrap();
+        return self.read_sfr(MCS51_REGISTERS::SP);
     }
 
     pub fn get_sfr_mut(&mut self, register: MCS51_REGISTERS) -> Option<&mut u8> {
         return self.special_function_registers.get_mut(register as usize);
     }
 
-    pub fn read_sfr(&self, register: MCS51_REGISTERS) -> Option<&u8> {
-        return self.special_function_registers.get(register as usize);
+    pub fn read_sfr(&self, register: MCS51_REGISTERS) -> u8 {
+        return self.special_function_registers[register as usize];
     }
 
     pub fn write_sfr(&mut self, register: MCS51_REGISTERS, value: u8) {
@@ -130,8 +131,8 @@ impl MCS51 {
     }
 
     pub fn get_current_register_bank_flags(&self) -> u8 {
-        let psw = self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
-        let bank = *psw & 0b11000;
+        let psw = self.read_sfr(MCS51_REGISTERS::PSW);
+        let bank = psw & 0b11000;
         return bank;
     }
 
@@ -431,14 +432,14 @@ impl MCS51 {
     }
 
     pub fn get_dptr(&mut self) -> u16 {
-        let dph = *self.read_sfr(MCS51_REGISTERS::DPH).unwrap();
-        let dpl = *self.read_sfr(MCS51_REGISTERS::DPL).unwrap();
+        let dph = self.read_sfr(MCS51_REGISTERS::DPH);
+        let dpl = self.read_sfr(MCS51_REGISTERS::DPL);
 
         return ((dph as u16) << 8) + dpl as u16;
     }
 
     pub fn set_carry_flag(&mut self, value: bool) {
-        let reg = *self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
+        let reg = self.read_sfr(MCS51_REGISTERS::PSW);
         if value {
             self.write_sfr(MCS51_REGISTERS::PSW, reg | 0x80);
         } else {
@@ -447,11 +448,11 @@ impl MCS51 {
     }
 
     pub fn get_carry_flag(&mut self) -> bool {
-        return self.read_sfr(MCS51_REGISTERS::PSW).unwrap() & 0x80 != 0;
+        return self.read_sfr(MCS51_REGISTERS::PSW) & 0x80 != 0;
     }
 
     pub fn set_aux_carry_flag(&mut self, value: bool) {
-        let reg = *self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
+        let reg = self.read_sfr(MCS51_REGISTERS::PSW);
         if value {
             self.write_sfr(MCS51_REGISTERS::PSW, reg | 0x40);
         } else {
@@ -460,11 +461,11 @@ impl MCS51 {
     }
 
     pub fn get_aux_carry_flag(&mut self) -> bool {
-        return self.read_sfr(MCS51_REGISTERS::PSW).unwrap() & 0x40 != 0;
+        return self.read_sfr(MCS51_REGISTERS::PSW) & 0x40 != 0;
     }
 
     pub fn set_overflow_flag(&mut self, value: bool) {
-        let reg = *self.read_sfr(MCS51_REGISTERS::PSW).unwrap();
+        let reg = self.read_sfr(MCS51_REGISTERS::PSW);
         if value {
             self.write_sfr(MCS51_REGISTERS::PSW, reg | 0x04);
         } else {
@@ -473,11 +474,7 @@ impl MCS51 {
     }
 
     pub fn get_overflow_flag(&mut self) -> bool {
-        return self.read_sfr(MCS51_REGISTERS::PSW).unwrap() & 0x04 != 0;
-    }
-
-    pub fn set_program(&mut self, program: Vec<u8>) {
-        self.program = program;
+        return self.read_sfr(MCS51_REGISTERS::PSW) & 0x04 != 0;
     }
 
     pub fn get_accumulator(&self) -> u8 {
@@ -486,13 +483,6 @@ impl MCS51 {
 
     pub fn set_accumulator(&mut self, value: u8) {
         self.special_function_registers[MCS51_REGISTERS::ACC as usize] = value;
-    }
-
-    pub fn reset(&mut self) {
-        self.pc = 0;
-        self.ram = [0; 255];
-        self.additional_cycles = 0;
-        self.reset_registers();
     }
 
     pub fn reset_registers(&mut self) {
@@ -522,21 +512,6 @@ impl MCS51 {
         self.special_function_registers[MCS51_REGISTERS::PSW as usize] = 0x00;
         self.special_function_registers[MCS51_REGISTERS::ACC as usize] = 0x00;
         self.special_function_registers[MCS51_REGISTERS::B as usize] = 0x00;
-    }
-
-    pub fn clock(&mut self) {
-        if self.additional_cycles > 0 {
-            self.additional_cycles -= 1;
-        } else {
-            self.next_instruction();
-        }
-    }
-
-    pub fn next_instruction(&mut self) {
-        let opcode = self.program[self.pc as usize];
-        self.op_pc = self.pc;
-        self.opcode_dispatch_table(opcode);
-        //self.opcode_dispatch_match(opcode);
     }
 
     pub fn next_instruction_debug_match(&mut self) {
@@ -591,7 +566,7 @@ impl MCS51 {
 
     pub fn get_u8(&self, addressing: MCS51_ADDRESSING) -> Option<u8> {
         match addressing {
-            MCS51_ADDRESSING::ACCUMULATOR => Some(*self.read_sfr(MCS51_REGISTERS::ACC).unwrap()),
+            MCS51_ADDRESSING::ACCUMULATOR => Some(self.read_sfr(MCS51_REGISTERS::ACC)),
             MCS51_ADDRESSING::REGISTER(reg) => Some(self.read_register(reg)),
             MCS51_ADDRESSING::DIRECT(offset) => Some(
                 *self
@@ -599,7 +574,7 @@ impl MCS51 {
                     .unwrap(),
             ),
             MCS51_ADDRESSING::INDIRECT_Ri(reg) => {
-                Some(*self.read(self.read_register(reg)).unwrap())
+                self.read(self.read_register(reg)).cloned()
             }
             MCS51_ADDRESSING::DATA(offset) => {
                 Some(self.program[self.op_pc as usize + offset as usize])
@@ -1506,8 +1481,14 @@ impl MCS51 {
         };
         self.dispatch[0xD0] = |cpu: &mut MCS51| {};
         self.dispatch[0xD1] = |cpu: &mut MCS51| {};
-        self.dispatch[0xD2] = |cpu: &mut MCS51| {};
-        self.dispatch[0xD3] = |cpu: &mut MCS51| {};
+        self.dispatch[0xD2] = |cpu: &mut MCS51| {
+            cpu.op_setb(MCS51_ADDRESSING::DATA(1));
+            cpu.opcode_additional_work("SETB", 2, 1)
+        };
+        self.dispatch[0xD3] = |cpu: &mut MCS51| {
+            cpu.set_carry_flag(true);
+            cpu.opcode_additional_work("SETB", 1, 1)
+        };
         self.dispatch[0xD4] = |cpu: &mut MCS51| {};
         self.dispatch[0xD5] = |cpu: &mut MCS51| {
             cpu.op_djnz(MCS51_ADDRESSING::DIRECT(1), MCS51_ADDRESSING::DATA(2), 3);
@@ -1685,6 +1666,19 @@ impl MCS51 {
     }
 
     /*
+    Set Bit
+
+    SETB sets the indicated bit to one. SETB can operate on·the carry flag or any directly
+    addressable bit. No other flags are affected.
+    */
+
+
+    pub fn op_setb(&mut self, addr: MCS51_ADDRESSING) {
+        let bit_addr = self.get_u8(addr).unwrap();
+        self.write_bit(bit_addr, true); 
+    }
+
+    /*
     Exchange Accumulator with byte variable
 
     XCH loads the Accumulator with the contents of the indicated variable, at the same time
@@ -1786,7 +1780,7 @@ impl MCS51 {
 
     pub fn op_mul(&mut self) {
         let a = self.get_accumulator() as u16;
-        let b = *self.read_sfr(MCS51_REGISTERS::B).unwrap() as u16;
+        let b = self.read_sfr(MCS51_REGISTERS::B) as u16;
 
         if a == 0 || b == 0 {
             self.write_sfr(MCS51_REGISTERS::B, 0);
@@ -1830,6 +1824,7 @@ impl MCS51 {
             result -= 1;
         }
 
+        self.set_accumulator(result);
         todo!();
     }
 
@@ -1849,7 +1844,7 @@ impl MCS51 {
     }
 
     pub fn op_div(&mut self) {
-        let b = *self.read_sfr(MCS51_REGISTERS::B).unwrap();
+        let b = self.read_sfr(MCS51_REGISTERS::B);
         self.set_carry_flag(false);
 
         if b == 0 {
@@ -1979,7 +1974,9 @@ impl MCS51 {
     }
 
     pub fn op_reti(&mut self) {
-        todo!();
+        let pc_hi = self.pop_stack() as u16;
+        let pc_lo = self.pop_stack() as u16;
+        self.pc = (pc_hi << 8) + pc_lo;
     }
 
     pub fn op_mov(&mut self, dest: MCS51_ADDRESSING, src: MCS51_ADDRESSING) {
@@ -2146,13 +2143,57 @@ impl MCS51 {
     pub fn op_sjmp(&mut self, addr: MCS51_ADDRESSING) {
         let addr_rel = self.get_i8(addr).unwrap();
         self.pc = self.pc + 2;
-
-        if addr_rel < 0 {
-            self.pc -= addr_rel.abs() as u16;
-        } else {
-            self.pc += addr_rel as u16;
-        }
+        self.write_pc_reli(addr_rel as i16);
     }
 
     pub fn op_nop(&mut self) {}
+}
+
+/*
+trait IOComponent {
+    fn get_pin(&self, pin: usize) -> bool;
+    fn set_pin(&mut self, pin: usize, val: bool);
+
+    fn get_port_u8(&self, port: usize) -> u8;
+    fn set_port_u8(&mut self, port: usize, val: u8);
+
+    fn get_port_u16(&self, port: usize) -> u16;
+    fn set_port_u16(&mut self, port: usize, val: u16);
+}*/
+
+impl MCU<u8> for MCS51 {
+    fn clock(&mut self) {
+        if self.additional_cycles > 0 {
+            self.additional_cycles -= 1;
+        } else {
+            self.next_instruction();
+        }
+    }
+
+    fn next_instruction(&mut self) {
+        let opcode = self.program[self.pc as usize];
+        self.op_pc = self.pc;
+        self.run_opcode(opcode);
+    }
+
+    fn run_opcode(&mut self, opcode: u8) {
+        self.opcode_dispatch_table(opcode as u8)
+    }
+
+    fn set_program(&mut self, program: Vec<u8>) {
+        self.program = program;
+    }
+
+    fn setup(&mut self) {
+        self.reset();
+        self.reset_registers();
+        self.generate_opcode_array();
+    }
+
+    fn reset(&mut self) {
+        self.pc = 0;
+        self.ram = [0; 255];
+        self.additional_cycles = 0;
+        self.reset_registers();
+    }
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod lib;
 use lib::decompiler::mcs51::*;
 use lib::mcus::mcs51::*;
@@ -5,8 +6,8 @@ use lib::mcus::pic16f628a::*;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::time::{Duration, Instant};
-use std::process::Command;
+use std::time::{Instant};
+use lib::traits::component::*;
 
 #[cfg(test)]
 mod tests {
@@ -156,38 +157,6 @@ mod tests {
     }
 }
 
-pub fn test1() {
-    let mut mcu = PIC16F628A::new();
-    mcu.reset();
-
-    mcu.set_memory_address(0x7E, 0x0F);
-
-    let opcode = 0b00110011111110;
-
-    println!(
-        "REG: {:08b}, C: {}",
-        mcu.get_memory_address(0x7E).unwrap(),
-        mcu.get_carry_flag()
-    );
-    let mut now = Instant::now();
-    mcu.run_opcode(opcode);
-
-    println!("{}", now.elapsed().as_nanos());
-    println!(
-        "REG: {:08b}, C: {}",
-        mcu.get_memory_address(0x7E).unwrap(),
-        mcu.get_carry_flag()
-    );
-    now = Instant::now();
-    mcu.run_opcode(opcode);
-    println!("{}", now.elapsed().as_nanos());
-    println!(
-        "REG: {:08b}, C: {}",
-        mcu.get_memory_address(0x7E).unwrap(),
-        mcu.get_carry_flag()
-    );
-}
-
 fn test_emulator_16f628a() {
     let mut mcu = PIC16F628A::new();
 
@@ -281,58 +250,26 @@ fn test_emulator_16f628a() {
 
 fn test_emulator_mcs51() {
     let mut mcu = MCS51::new();
-    mcu.generate_opcode_array();
-
-    /*
-    mcu.set_program(vec![
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x04, // Increment Accumulator
-        0x02, 0x00, 0x00 // Jump to beginning
-    ]);
-    */
-
     
-    mcu.set_program(vec![
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
-        0x08, // Increment R1
+    test_emulator(&mut mcu, vec![
+        0x08, 0x08, 0x08, 0x08, 0x08,
+        0x08, 0x08, 0x08, 0x08, 0x08,
         0x02, 0x00, 0x00, // Jump to beginning
     ]);
     
-
     /*
-    mcu.set_program(vec![
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x00, // NOP
-        0x02, 0x00, 0x00 // Jump to beginning
+    test_emulator(&mut mcu, vec![
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, // Jump to beginning
     ]);
     */
-    
+}
 
-    
+fn test_emulator(mcu: &mut dyn MCU<u8>, program: Vec<u8>) {
+    mcu.setup();
+    mcu.set_program(program);
+
     for _j in 0..10 {
         mcu.reset();
 
@@ -353,13 +290,6 @@ fn test_emulator_mcs51() {
             1.0 / time_us_inst
         );
     }
-    
-    /*
-    for _i in 0..20 {
-        mcu.next_instruction();
-        println!("{}",mcu.pc);
-    }
-    */
 }
 
 fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
@@ -408,12 +338,14 @@ fn run_mcs51(filename: &str) {
 
     let mut prev_pc: u16 = 0;
 
+    let breakpoints: Vec<u16> = vec![0x5DD6];
+
     loop {
         let pc = &mcu.pc;
-        println!("{:0x} {:0x}", pc, decomp.program[*pc as usize]);
+        //println!("{:0x} {:0x}", pc, decomp.program[*pc as usize]);
         //let inst = decomp.instructions[pc].clone();
         let inst = decomp.get_instruction(*pc);
-        //println!("{}", inst);
+        println!("{}", inst);
 
         /*
         if *pc != 0 && prev_pc == *pc {

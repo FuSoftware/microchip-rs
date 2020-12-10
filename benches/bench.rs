@@ -1,6 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use microchip_rs::lib::mcus::mcs51::*;
+use microchip_rs::lib::traits::component::*;
 
 fn mcs51_benchmark(c: &mut Criterion) {
     let iterations = 1000000;
