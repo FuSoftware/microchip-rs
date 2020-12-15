@@ -8,6 +8,8 @@ use std::fs::File;
 use std::io::Read;
 use std::time::{Instant};
 use lib::traits::component::*;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 #[cfg(test)]
 mod tests {
@@ -321,6 +323,76 @@ fn test_decompile_mcs51() {
     dec.write_to_file("data/code.asm");
 }
 
+fn repl_mcs51(filename: &str) {
+    let mut f = File::open(filename).expect("no file found");
+    let metadata = fs::metadata(filename).expect("unable to read metadata");
+    let mut buffer = vec![0; metadata.len() as usize];
+    f.read(&mut buffer).expect("buffer overflow");
+
+    let mut mcu = MCS51::new();
+    mcu.generate_opcode_array();
+    mcu.set_program(buffer.clone());
+    //mcu.debug = true;
+
+    let mut decomp = MCS51_Decompiler::new();
+    decomp.program = buffer;
+    decomp.decompile(0);
+
+    let mut prev_pc: u16 = 0;
+
+    let breakpoints: Vec<u16> = vec![0x5DD6];
+
+    let mut rl = Editor::<()>::new();
+
+    loop {
+        let readline = rl.readline(">> ");
+
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+
+                match line.as_str() {
+                    "exit" => {
+                        break;
+                    }
+
+                    "" => {}
+
+                    _ => {
+                        if line.starts_with("wait ") {
+                            let pattern = line.replace("wait ", "");
+
+                            loop {
+                                let pc = &mcu.pc;
+                                let inst = decomp.get_instruction(*pc);
+                                mcu.next_instruction();
+                                println!("{}", inst);
+
+                                if inst.to_string().contains(&pattern) {
+                                    println!("{}", inst);
+                                    break;
+                                }
+                            }
+                            
+                            
+                        } else {
+                            let pc = &mcu.pc;
+                            let inst = decomp.get_instruction(*pc);
+                            println!("{}", inst);
+
+                            mcu.next_instruction();
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
+            }
+        }
+    }
+}
+
 fn run_mcs51(filename: &str) {
     let mut f = File::open(filename).expect("no file found");
     let metadata = fs::metadata(filename).expect("unable to read metadata");
@@ -361,5 +433,5 @@ fn run_mcs51(filename: &str) {
 
 fn main() {
     //test_emulator_mcs51();
-    run_mcs51("data/1594462804_raw.bin");
+    repl_mcs51("data/1594462804_raw.bin");
 }

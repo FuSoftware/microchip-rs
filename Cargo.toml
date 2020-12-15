@@ -19,6 +19,9 @@ codegen-units = 1
 [dev-dependencies]
 criterion = "0.3"
 
+[dependencies]
+rustyline = "6.2"
+
 [[bench]]
 name = "bench"
 harness = false

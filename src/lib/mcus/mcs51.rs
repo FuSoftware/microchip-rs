@@ -176,7 +176,7 @@ impl MCS51 {
     pub fn write_bit(&mut self, address: u8, value: bool) {        
         let addr = address & 0xF8;
 
-        println!("{:0x} {:0x}", address, addr);
+        //println!("{:0x} {:0x}", address, addr);
 
         let bit = address & 0x7;
         let mut src = *self.read(addr).unwrap();
@@ -2084,7 +2084,6 @@ impl MCS51 {
         
         if bit {
             let rel = self.get_i8(code_addr).unwrap();
-            println!("{}", rel);
             self.write_pc_reli(rel as i16);
         }
     }
