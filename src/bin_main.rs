@@ -294,6 +294,14 @@ fn test_emulator(mcu: &mut dyn MCU<u8>, program: Vec<u8>) {
     }
 }
 
+fn run_mcs51(program: Vec<u8>) {
+    let mut mcu = MCS51::new();
+    mcu.setup();
+    mcu.set_program(program);
+    mcu.run();
+    println!("{}", mcu.read_register(2));
+}
+
 fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
     let mut f = File::open(filename).expect("no file found");
     let metadata = std::fs::metadata(filename).expect("unable to read metadata");
@@ -302,9 +310,9 @@ fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
     buffer
 }
 
-fn test_decompile_mcs51() {
+fn test_decompile_mcs51_2(program: Vec<u8>, out_file: &str) {
     let mut dec = MCS51_Decompiler::new();
-    dec.program = get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\1594462804_raw.bin"#);
+    dec.program = program;
 
     /*
     let mut next: u16 = 0;
@@ -320,7 +328,11 @@ fn test_decompile_mcs51() {
     */
 
     dec.decompile(0);
-    dec.write_to_file("data/code.asm");
+    dec.write_to_file(out_file);
+}
+
+fn test_decompile_mcs51() {
+    test_decompile_mcs51_2(get_file_as_byte_vec(r#"D:\Perso\Prog\rust\microchip-rs\data\V2-10_raw.bin"#), "data/code_2_10.asm")
 }
 
 fn repl_mcs51(filename: &str) {
@@ -393,7 +405,7 @@ fn repl_mcs51(filename: &str) {
     }
 }
 
-fn run_mcs51(filename: &str) {
+fn run_mcs51_file(filename: &str) {
     let mut f = File::open(filename).expect("no file found");
     let metadata = fs::metadata(filename).expect("unable to read metadata");
     let mut buffer = vec![0; metadata.len() as usize];
@@ -432,6 +444,10 @@ fn run_mcs51(filename: &str) {
 }
 
 fn main() {
-    //test_emulator_mcs51();
-    repl_mcs51("data/1594462804_raw.bin");
+    test_emulator_mcs51();
+    //repl_mcs51("data/1594462804_raw.bin");
+    //test_decompile_mcs51();
+
+    //run_mcs51(vec![0x78, 0x39, 0x79, 0x05, 0x7B, 0x10, 0xE8, 0x13, 0x50, 0x01, 0x0A, 0xBB, 0x08, 0x01, 0xE9, 0xDB, 0xF6]);
+    //test_decompile_mcs51_2(vec![0x78, 0x39, 0x79, 0x05, 0x7B, 0x10, 0xE8, 0x13, 0x50, 0x01, 0x0A, 0xBB, 0x08, 0x01, 0xE9, 0xDB, 0xF6], "R:\\out.asm")
 }

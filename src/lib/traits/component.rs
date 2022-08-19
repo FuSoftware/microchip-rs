@@ -16,4 +16,5 @@ pub trait MCU<T> {
     fn set_program(&mut self, program: Vec<u8>);
     fn setup(&mut self);
     fn reset(&mut self);
+    fn run(&mut self);
 }

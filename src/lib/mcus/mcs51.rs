@@ -1652,14 +1652,13 @@ impl MCS51 {
         (self.dispatch[opcode as usize])(self);
     }
 
-
     pub fn opcode_additional_work(&mut self, _label: &str, cycles: u8, pc: u16) {
         if pc != 0 {
             self.pc += pc
-        };
+        }
         if cycles != 0 {
             self.additional_cycles = cycles
-        };
+        }
         if self.debug {
             println!("{:0x} : {}", self.pc, _label);
         }
@@ -1671,7 +1670,6 @@ impl MCS51 {
     SETB sets the indicated bit to one. SETB can operate on·the carry flag or any directly
     addressable bit. No other flags are affected.
     */
-
 
     pub fn op_setb(&mut self, addr: MCS51_ADDRESSING) {
         let bit_addr = self.get_u8(addr).unwrap();
@@ -2116,7 +2114,7 @@ impl MCS51 {
         let acc = self.get_accumulator();
         let underflow = acc & 1 != 0;
         let carry = self.get_carry_flag();
-        self.set_accumulator(acc >> 1 + (carry as u8 * 0x80));
+        self.set_accumulator(acc.overflowing_shr(1).0 + (carry as u8 * 0x80));
         self.set_carry_flag(underflow);
     }
 
@@ -2194,5 +2192,12 @@ impl MCU<u8> for MCS51 {
         self.ram = [0; 255];
         self.additional_cycles = 0;
         self.reset_registers();
+    }
+
+    fn run(&mut self) {
+        let program_len = self.program.len() as u16;
+        while self.pc < program_len {
+            self.next_instruction();
+        }
     }
 }

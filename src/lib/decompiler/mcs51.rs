@@ -95,12 +95,18 @@ impl MCS51_Decompiler {
         while !next_addresses.is_empty() {
             let addr = next_addresses.pop_front().unwrap();
             if !self.instructions.contains_key(&addr) {
-                let v = self.get_instruction(addr);
-                //println!("{}", v);
-                for new_addr in &v.next {
-                    next_addresses.push_front(*new_addr);
+                if (addr as usize) < self.program.len() {
+                    println!("PC address {} ", addr);
+                    let v = self.get_instruction(addr);
+                    //println!("{}", v);
+                    for new_addr in &v.next {
+                        next_addresses.push_front(*new_addr);
+                    }
+                    self.instructions.insert(addr, v);
+                } else {
+                    println!("PC address {} out of bounds {}", addr, self.program.len());
                 }
-                self.instructions.insert(addr, v);
+                
             }
         }
 
@@ -306,6 +312,14 @@ impl MCS51_Decompiler {
                     code: format!("LJMP LAB_{:04x}", dest),
                     next: vec![dest],
                 };
+            }
+
+            0x04 => {
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("INC A"),
+                );
             }
 
             0x05 => {
@@ -761,6 +775,14 @@ impl MCS51_Decompiler {
 
             0xC5 => {
                 return self.two_byte_instruction(address, opcode, false, "XCH A, ", "");
+            }
+
+            0xC8..=0xCF => {
+                return self.one_byte_instruction(
+                    address,
+                    opcode,
+                    &format!("XCH A, R{}", opcode & 0x7),
+                );
             }
 
             0xD0 => {

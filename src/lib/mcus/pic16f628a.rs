@@ -181,7 +181,9 @@ pub struct PIC16F628A {
     additional_cycles: u8,
     additional_pc: u8,
     program_memory: Vec<u16>,
-    stack: Vec<u16>,
+    pc: u16,
+    stack: [u16; 8],
+    stack_pointer: u8,
     registers: [u8; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
     common_memory: [u8; 16],
     gpr1: [u8; 80],
@@ -198,8 +200,10 @@ impl PIC16F628A {
             status: 0,
             additional_cycles: 0,
             additional_pc: 0,
+            pc: 0,
             program_memory: Vec::new(),
-            stack: Vec::new(),
+            stack: [0; 8],
+            stack_pointer: 0,
             registers: [0; PIC16F628A_REGISTERS::REGISTER_COUNT as usize],
             common_memory: [0; 16],
             gpr1: [0; 80],
@@ -543,6 +547,41 @@ impl PIC16F628A {
         return *self.get_memory_address(address).unwrap();
     }
 
+    /* 
+    Pops the top value of the stack and decrements the stack pointer.
+    If the stack pointer is about to overflow, set it to 7, as the stack is 8 levels deep.
+    */
+
+    fn pop_stack(&mut self) -> u16 {
+        let res = self.stack[self.stack_pointer as usize];
+
+        if self.stack_pointer == 0 {
+            self.stack_pointer = 7;
+        } else {
+            self.stack_pointer -= 1;
+        }
+
+        return res;
+    }
+
+    /*
+    Push val on top of the stack and increments he stack pointer
+    If the stack pointer is about to go above 7, wrap it to 0 as the stack is 8 levels deep.
+    */
+
+    fn push_stack(&mut self, val: u16) {
+        self.stack[self.stack_pointer as usize] = val;
+        self.stack_pointer += 1;
+        if self.stack_pointer > 7 {
+            self.stack_pointer = 0;
+        }
+    }
+
+    fn write_pc_tos(&mut self) {
+        let pc = self.pop_stack();
+        self.pc = pc;
+    }
+
     pub fn next_instruction(&mut self) {
         let opcode = self.program_memory[self.pc_read() as usize];
         self.run_opcode(opcode);
@@ -561,7 +600,7 @@ impl PIC16F628A {
                 match id {
                     0b00 => {
                         // Byte oriented
-                        let code = opcode & 0xF00;
+                        let code = ((opcode & 0xF00) >> 8) as u8;
                         let f: u8 = (opcode & 0x7F) as u8;
                         let d = if code < 2 {
                             (opcode & 0x80) > 0
@@ -570,22 +609,22 @@ impl PIC16F628A {
                         };
 
                         match code {
-                            0x000 => self.op_movwf(f),
-                            0x100 => self.op_clrf(f),
-                            0x200 => self.op_subwf(f, d),
-                            0x300 => self.op_decf(f, d),
-                            0x400 => self.op_iorwf(f, d),
-                            0x500 => self.op_andwf(f, d),
-                            0x600 => self.op_xorwf(f, d),
-                            0x700 => self.op_addwf(f, d),
-                            0x800 => self.op_movf(f, d),
-                            0x900 => self.op_comf(f, d),
-                            0xA00 => self.op_incf(f, d),
-                            0xB00 => self.op_decfsz(f, d),
-                            0xC00 => self.op_rrf(f, d),
-                            0xD00 => self.op_rlf(f, d),
-                            0xE00 => self.op_swapf(f, d),
-                            0xF00 => self.op_incfsz(f, d),
+                            0x00 => self.op_movwf(f),
+                            0x01 => self.op_clrf(f),
+                            0x02 => self.op_subwf(f, d),
+                            0x03 => self.op_decf(f, d),
+                            0x04 => self.op_iorwf(f, d),
+                            0x05 => self.op_andwf(f, d),
+                            0x06 => self.op_xorwf(f, d),
+                            0x07 => self.op_addwf(f, d),
+                            0x08 => self.op_movf(f, d),
+                            0x09 => self.op_comf(f, d),
+                            0x0A => self.op_incf(f, d),
+                            0x0B => self.op_decfsz(f, d),
+                            0x0C => self.op_rrf(f, d),
+                            0x0D => self.op_rlf(f, d),
+                            0x0E => self.op_swapf(f, d),
+                            0x0F => self.op_incfsz(f, d),
                             _ => println!("Unused OPCODE {}", opcode),
                         }
                     }
@@ -853,13 +892,13 @@ impl PIC16F628A {
     fn op_bcf(&mut self, f: u8, b: u8) {
         let data = self.read(f);
         let new_data = data & !(1 << b);
-        self.write(f, data);
+        self.write(f, new_data);
     }
 
     fn op_bsf(&mut self, f: u8, b: u8) {
         let data = self.read(f);
         let new_data = data | (1 << b);
-        self.write(f, data);
+        self.write(f, new_data);
     }
 
     fn op_btfsc(&mut self, f: u8, b: u8) {
@@ -902,7 +941,11 @@ impl PIC16F628A {
 
     // Call subroutine
     fn op_call(&mut self, k: u16) {
-        todo!();
+        let stack_pc = self.pc + 1;
+        self.push_stack(stack_pc);
+
+        let pclath_bits = ((self.read_register(PIC16F628A_REGISTERS::PCLATH) & 0b11000) as u16) << 10;
+        self.pc = k + pclath_bits;
     }
 
     // Clear watchdog timer
@@ -930,17 +973,19 @@ impl PIC16F628A {
 
     // Return with literal in W
     fn op_retlw(&mut self, k: u8) {
-        todo!();
+        self.w = k;
+        self.write_pc_tos();
     }
 
     // Return from interrupt
     fn op_retfie(&mut self) {
-        todo!();
+        self.write_pc_tos();
+        self.write_register_bit(PIC16F628A_REGISTERS::INTCON, 7, true);
     }
 
     // Return from subroutine
     fn op_return(&mut self) {
-        todo!();
+        self.write_pc_tos();
     }
 
     // Go into standby mode
